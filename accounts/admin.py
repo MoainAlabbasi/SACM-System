@@ -136,11 +136,11 @@ class UserAdmin(BaseUserAdmin):
 @admin.register(UserActivity)
 class UserActivityAdmin(admin.ModelAdmin):
     """إدارة سجل النشاط"""
-    list_display = ['user', 'action', 'ip_address', 'timestamp', 'details_preview']
-    list_filter = ['action', 'timestamp']
+    list_display = ['user', 'action', 'ip_address', 'created_at', 'details_preview']
+    list_filter = ['action', 'created_at']
     search_fields = ['user__academic_id', 'user__full_name', 'ip_address', 'details']
-    ordering = ['-timestamp']
-    readonly_fields = ['user', 'action', 'ip_address', 'user_agent', 'details', 'timestamp']
+    ordering = ['-created_at']
+    readonly_fields = ['user', 'action', 'ip_address', 'user_agent', 'details', 'created_at']
     
     def details_preview(self, obj):
         if obj.details:

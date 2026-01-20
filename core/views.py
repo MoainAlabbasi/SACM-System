@@ -98,7 +98,7 @@ def admin_dashboard_view(request):
         'active_semester': Semester.objects.filter(is_current=True).first(),
         'recent_users': User.objects.order_by('-created_at')[:5],
         'recent_files': LectureFile.objects.filter(is_deleted=False).order_by('-upload_date')[:5],
-        'recent_activities': UserActivity.objects.select_related('user').order_by('-timestamp')[:10],
+        'recent_activities': UserActivity.objects.select_related('user').order_by('-created_at')[:10],
     }
     return render(request, 'admin_panel/dashboard.html', context)
 
