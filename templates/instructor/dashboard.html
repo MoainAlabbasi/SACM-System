@@ -3,11 +3,19 @@
 {% block title %}لوحة تحكم المدرس{% endblock %}
 
 {% block sidebar_nav %}
+<div class="nav-section">الرئيسية</div>
 <a href="{% url 'core:instructor_dashboard' %}" class="nav-link active">
-    <i class="bi bi-speedometer2"></i>الرئيسية
+    <i class="bi bi-speedometer2"></i>لوحة التحكم
 </a>
+
+<div class="nav-section">إدارة المحتوى</div>
 <a href="{% url 'core:instructor_courses' %}" class="nav-link">
     <i class="bi bi-book"></i>مقرراتي
+</a>
+
+<div class="nav-section">التواصل</div>
+<a href="#" class="nav-link">
+    <i class="bi bi-bell"></i>إرسال إشعار
 </a>
 {% endblock %}
 

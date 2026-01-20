@@ -29,6 +29,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # Third-party apps
+    'django_htmx',
     # Local apps
     'core.apps.CoreConfig',
     'accounts.apps.AccountsConfig',
@@ -38,11 +40,13 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',  # تعدد اللغات
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_htmx.middleware.HtmxMiddleware',  # HTMX Middleware
 ]
 
 ROOT_URLCONF = 'sacm_project.urls'
@@ -58,6 +62,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'django.template.context_processors.i18n',  # تعدد اللغات
+                'core.context_processors.theme_context',  # الوضع الليلي
             ],
         },
     },
@@ -84,11 +90,24 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# Internationalization
-LANGUAGE_CODE = 'ar'
+# ==========================================
+# Internationalization (تعدد اللغات)
+# ==========================================
+LANGUAGE_CODE = 'ar'  # اللغة الافتراضية
 TIME_ZONE = 'Asia/Riyadh'
 USE_I18N = True
+USE_L10N = True
 USE_TZ = True
+
+# اللغات المدعومة (العربية فقط)
+LANGUAGES = [
+    ('ar', 'العربية'),
+]
+
+# مسار ملفات الترجمة
+LOCALE_PATHS = [
+    BASE_DIR / 'locale',
+]
 
 # Static files
 STATIC_URL = 'static/'
@@ -106,13 +125,40 @@ LOGIN_URL = 'accounts:login'
 LOGIN_REDIRECT_URL = 'core:dashboard_redirect'
 LOGOUT_REDIRECT_URL = 'core:home'
 
-# Email Configuration (Console for development)
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# ==========================================
+# Email Configuration
+# ==========================================
+# للتطوير: Console Backend
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
 
-# AI Rate Limiting
-AI_RATE_LIMIT = int(os.getenv('AI_RATE_LIMIT', 10))
-AI_RATE_LIMIT_PERIOD = int(os.getenv('AI_RATE_LIMIT_PERIOD', 3600))
+# للإنتاج: SMTP
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'S-ACM <noreply@sacm.edu>')
 
+# ==========================================
+# AI Configuration (Gemini API)
+# ==========================================
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+AI_RATE_LIMIT = int(os.getenv('AI_RATE_LIMIT', 10))  # عدد الطلبات
+AI_RATE_LIMIT_PERIOD = int(os.getenv('AI_RATE_LIMIT_PERIOD', 3600))  # الفترة بالثواني
+
+# ==========================================
 # File Upload Settings
-FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
+# ==========================================
+FILE_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024  # 50MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024  # 50MB
 ALLOWED_FILE_EXTENSIONS = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt', 'md', 'mp4', 'webm', 'jpg', 'jpeg', 'png']
+
+# ==========================================
+# Security Settings (للإنتاج)
+# ==========================================
+if not DEBUG:
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = True

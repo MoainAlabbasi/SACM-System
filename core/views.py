@@ -812,6 +812,30 @@ def student_notification_detail_view(request, notification_id):
 
 
 @login_required
+def mark_notification_read_view(request, notification_id):
+    """تحديد إشعار واحد كمقروء"""
+    if request.method == 'POST':
+        try:
+            recipient = NotificationRecipient.objects.get(
+                notification_id=notification_id,
+                user=request.user
+            )
+            if not recipient.is_read:
+                recipient.is_read = True
+                recipient.read_at = timezone.now()
+                recipient.save()
+        except NotificationRecipient.DoesNotExist:
+            pass
+    
+    # إرجاع JSON إذا كان الطلب HTMX
+    if request.headers.get('HX-Request'):
+        from django.http import HttpResponse
+        return HttpResponse('')
+    
+    return redirect('core:student_notifications')
+
+
+@login_required
 def mark_all_notifications_read_view(request):
     """تحديد جميع الإشعارات كمقروءة"""
     if request.method == 'POST':
@@ -864,3 +888,43 @@ def student_quizzes_view(request):
         'quizzes': quizzes,
     }
     return render(request, 'student/quizzes.html', context)
+
+
+# ==================== تبديل اللغة والوضع ====================
+
+def toggle_theme_view(request):
+    """تبديل الوضع الليلي/الفاتح"""
+    current_theme = request.session.get('theme', 'light')
+    new_theme = 'dark' if current_theme == 'light' else 'light'
+    
+    # حفظ في الجلسة
+    request.session['theme'] = new_theme
+    
+    # حفظ في تفضيلات المستخدم إذا كان مسجل الدخول
+    if request.user.is_authenticated:
+        request.user.preferred_theme = new_theme
+        request.user.save(update_fields=['preferred_theme'])
+    
+    # إرجاع JSON إذا كان الطلب HTMX
+    if request.headers.get('HX-Request'):
+        return JsonResponse({'theme': new_theme})
+    
+    # إعادة التوجيه للصفحة السابقة
+    return redirect(request.META.get('HTTP_REFERER', 'core:home'))
+
+
+
+
+def get_user_preferences_view(request):
+    """الحصول على تفضيلات المستخدم (للـ AJAX)"""
+    theme = request.session.get('theme', 'light')
+    language = request.session.get('django_language', 'ar')
+    
+    if request.user.is_authenticated:
+        theme = request.user.preferred_theme or theme
+        language = request.user.preferred_language or language
+    
+    return JsonResponse({
+        'theme': theme,
+        'language': language,
+    })

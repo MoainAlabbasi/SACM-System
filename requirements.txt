@@ -17,7 +17,8 @@ python-dotenv>=1.0.0
 # ==========================================
 # Google Gemini AI (مطلوب للذكاء الاصطناعي)
 # ==========================================
-google-generativeai>=0.8.0
+google-genai>=1.0.0
+# Fallback: google-generativeai>=0.8.0
 
 # ==========================================
 # HTMX Integration (للتفاعلية)

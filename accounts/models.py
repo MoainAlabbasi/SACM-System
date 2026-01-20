@@ -135,6 +135,43 @@ class User(AbstractUser):
     major = models.ForeignKey(Major, on_delete=models.SET_NULL, null=True, blank=True, related_name='students', verbose_name='التخصص')
     level = models.ForeignKey(Level, on_delete=models.SET_NULL, null=True, blank=True, related_name='students', verbose_name='المستوى')
     
+    # صور الملف الشخصي
+    profile_image = models.ImageField(
+        upload_to='profiles/', 
+        blank=True, 
+        null=True, 
+        verbose_name='صورة الملف الشخصي'
+    )
+    cover_image = models.ImageField(
+        upload_to='covers/', 
+        blank=True, 
+        null=True, 
+        verbose_name='صورة الغلاف'
+    )
+    
+    # تفضيلات المستخدم
+    LANGUAGE_CHOICES = [
+        ('ar', 'العربية'),
+        ('en', 'English'),
+    ]
+    THEME_CHOICES = [
+        ('dark', 'الوضع الليلي'),
+        ('light', 'الوضع الفاتح'),
+    ]
+    
+    preferred_language = models.CharField(
+        max_length=5, 
+        choices=LANGUAGE_CHOICES, 
+        default='ar', 
+        verbose_name='اللغة المفضلة'
+    )
+    preferred_theme = models.CharField(
+        max_length=10, 
+        choices=THEME_CHOICES, 
+        default='dark', 
+        verbose_name='المظهر المفضل'
+    )
+    
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
     

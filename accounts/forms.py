@@ -179,7 +179,7 @@ class SetPasswordForm(forms.Form):
 
 
 class ForgotPasswordForm(forms.Form):
-    """نموذج نسيت كلمة المرور"""
+    """نموذج نسيت كلمة المرور - يتطلب الرقم الأكاديمي ورقم البطاقة الجامعية"""
     academic_id = forms.CharField(
         label='الرقم الأكاديمي/الوظيفي',
         max_length=50,
@@ -189,19 +189,35 @@ class ForgotPasswordForm(forms.Form):
             'autofocus': True
         })
     )
+    id_card_number = forms.CharField(
+        label='رقم البطاقة الجامعية/الشخصية',
+        max_length=50,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'أدخل رقم البطاقة'
+        })
+    )
     
-    def clean_academic_id(self):
-        academic_id = self.cleaned_data.get('academic_id')
-        try:
-            user = User.objects.get(academic_id=academic_id)
-            if not user.email:
-                raise forms.ValidationError('لم يتم تسجيل بريد إلكتروني لهذا الحساب.')
-            if user.account_status != 'active':
-                raise forms.ValidationError('هذا الحساب غير مفعّل.')
-            self.user = user
-        except User.DoesNotExist:
-            raise forms.ValidationError('الرقم الأكاديمي غير موجود.')
-        return academic_id
+    def clean(self):
+        cleaned_data = super().clean()
+        academic_id = cleaned_data.get('academic_id')
+        id_card_number = cleaned_data.get('id_card_number')
+        
+        if academic_id and id_card_number:
+            try:
+                user = User.objects.get(
+                    academic_id=academic_id,
+                    id_card_number=id_card_number
+                )
+                if not user.email:
+                    raise forms.ValidationError('لم يتم تسجيل بريد إلكتروني لهذا الحساب.')
+                if user.account_status != 'active':
+                    raise forms.ValidationError('هذا الحساب غير مفعّل.')
+                self.user = user
+            except User.DoesNotExist:
+                raise forms.ValidationError('البيانات المدخلة غير صحيحة. تأكد من الرقم الأكاديمي ورقم البطاقة.')
+        
+        return cleaned_data
 
 
 class ResetPasswordForm(forms.Form):

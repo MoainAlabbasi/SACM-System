@@ -1,44 +1,541 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="d-flex">
-    <!-- Sidebar -->
-    <aside class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <h5 class="mb-1">{{ user.full_name }}</h5>
-            <small class="opacity-75">{{ user.role.get_name_display }}</small>
-        </div>
-        
-        <nav class="sidebar-nav">
-            {% block sidebar_nav %}{% endblock %}
-        </nav>
-    </aside>
-    
-    <!-- Main Content -->
-    <main class="main-content">
-        <!-- Page Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h2 class="mb-1">{% block page_title %}{% endblock %}</h2>
-                <nav aria-label="breadcrumb">
-                    <ol class="breadcrumb mb-0">
-                        <li class="breadcrumb-item"><a href="{% url 'core:dashboard_redirect' %}">الرئيسية</a></li>
-                        {% block breadcrumb %}{% endblock %}
-                    </ol>
-                </nav>
-            </div>
-            <div>
-                {% block page_actions %}{% endblock %}
-            </div>
-        </div>
-        
-        <!-- Page Content -->
-        {% block page_content %}{% endblock %}
-    </main>
-</div>
+<!-- Overlay for mobile -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
-<!-- Mobile Sidebar Toggle -->
-<button class="btn btn-primary d-lg-none position-fixed" style="bottom: 1rem; left: 1rem; z-index: 1001;" onclick="document.getElementById('sidebar').classList.toggle('show')">
-    <i class="bi bi-list"></i>
-</button>
+<!-- Sidebar Drawer -->
+<aside class="sidebar-drawer" id="sidebarDrawer">
+    <div class="sidebar-drawer-header">
+        <div class="d-flex align-items-center">
+            {% if user.profile_image %}
+                <img src="{{ user.profile_image.url }}" alt="{{ user.full_name }}" class="sidebar-avatar">
+            {% else %}
+                <div class="sidebar-avatar-placeholder">
+                    <i class="bi bi-person-fill"></i>
+                </div>
+            {% endif %}
+            <div class="me-3">
+                <h6 class="mb-0 text-white">{{ user.full_name }}</h6>
+                <small class="text-white-50">{{ user.role.get_name_display }}</small>
+            </div>
+        </div>
+        <button class="btn-close-sidebar" onclick="closeSidebar()" aria-label="إغلاق القائمة">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+    
+    <nav class="sidebar-drawer-nav">
+        {% block sidebar_nav %}{% endblock %}
+    </nav>
+    
+    <div class="sidebar-drawer-footer">
+        <a href="{% url 'accounts:logout' %}" class="btn btn-outline-light btn-sm w-100">
+            <i class="bi bi-box-arrow-right me-2"></i>
+            تسجيل الخروج
+        </a>
+    </div>
+</aside>
+
+<!-- Main Content -->
+<main class="main-content-full">
+    <!-- Top Bar -->
+    <div class="topbar">
+        <div class="d-flex align-items-center">
+            <button class="btn-hamburger" onclick="toggleSidebar()" aria-label="فتح القائمة">
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+            </button>
+            <h5 class="mb-0 me-3">{% block page_title %}{% endblock %}</h5>
+        </div>
+        
+        <div class="d-flex align-items-center gap-3">
+            <!-- Theme Toggle -->
+            <button class="btn-icon" onclick="toggleTheme()" title="تبديل المظهر">
+                <i class="bi bi-moon-fill" id="themeIcon"></i>
+            </button>
+            
+            <!-- Notifications -->
+            <a href="{% if user.role.name == 'student' %}{% url 'core:student_notifications' %}{% else %}#{% endif %}" class="btn-icon position-relative" title="الإشعارات">
+                <i class="bi bi-bell-fill"></i>
+                {% if unread_notifications_count %}
+                <span class="notification-badge">{{ unread_notifications_count }}</span>
+                {% endif %}
+            </a>
+            
+            <!-- User Menu -->
+            <div class="dropdown">
+                <button class="btn-user-menu dropdown-toggle" data-bs-toggle="dropdown">
+                    {% if user.profile_image %}
+                        <img src="{{ user.profile_image.url }}" alt="{{ user.full_name }}" class="user-avatar-sm">
+                    {% else %}
+                        <div class="user-avatar-sm-placeholder">
+                            <i class="bi bi-person-fill"></i>
+                        </div>
+                    {% endif %}
+                </button>
+                <ul class="dropdown-menu dropdown-menu-start">
+                    <li><a class="dropdown-item" href="#"><i class="bi bi-person me-2"></i>الملف الشخصي</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>الإعدادات</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item text-danger" href="{% url 'accounts:logout' %}"><i class="bi bi-box-arrow-right me-2"></i>تسجيل الخروج</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="breadcrumb-container">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'core:dashboard_redirect' %}">الرئيسية</a></li>
+            {% block breadcrumb %}{% endblock %}
+        </ol>
+    </nav>
+    
+    <!-- Page Actions -->
+    <div class="page-actions">
+        {% block page_actions %}{% endblock %}
+    </div>
+    
+    <!-- Page Content -->
+    <div class="page-content">
+        {% block page_content %}{% endblock %}
+    </div>
+</main>
+
+<style>
+/* ==================== Sidebar Drawer ==================== */
+.sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 1040;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.sidebar-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.sidebar-drawer {
+    position: fixed;
+    top: 0;
+    right: -320px;
+    width: 300px;
+    height: 100vh;
+    background: linear-gradient(180deg, var(--primary-color) 0%, #0f172a 100%);
+    z-index: 1050;
+    display: flex;
+    flex-direction: column;
+    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.3);
+}
+
+.sidebar-drawer.open {
+    right: 0;
+}
+
+.sidebar-drawer-header {
+    padding: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.sidebar-avatar-placeholder {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.btn-close-sidebar {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: white;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-close-sidebar:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: rotate(90deg);
+}
+
+.sidebar-drawer-nav {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem 0;
+}
+
+.sidebar-drawer-nav .nav-link {
+    display: flex;
+    align-items: center;
+    padding: 0.875rem 1.5rem;
+    color: rgba(255, 255, 255, 0.8);
+    transition: all 0.2s;
+    border-right: 3px solid transparent;
+    text-decoration: none;
+}
+
+.sidebar-drawer-nav .nav-link:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    padding-right: 2rem;
+}
+
+.sidebar-drawer-nav .nav-link.active {
+    background: rgba(37, 99, 235, 0.3);
+    color: white;
+    border-right-color: #60a5fa;
+}
+
+.sidebar-drawer-nav .nav-link i {
+    margin-left: 0.75rem;
+    width: 24px;
+    text-align: center;
+    font-size: 1.1rem;
+}
+
+.sidebar-drawer-nav .nav-section {
+    padding: 0.5rem 1.5rem;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.4);
+    letter-spacing: 0.05em;
+    margin-top: 1rem;
+}
+
+.sidebar-drawer-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ==================== Main Content Full Width ==================== */
+.main-content-full {
+    min-height: 100vh;
+    padding-top: 0;
+    background: var(--gray-100);
+}
+
+body.dark-mode .main-content-full {
+    background: #0f172a;
+}
+
+/* ==================== Top Bar ==================== */
+.topbar {
+    position: sticky;
+    top: 56px;
+    z-index: 100;
+    background: white;
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--gray-200);
+    box-shadow: var(--shadow-sm);
+}
+
+body.dark-mode .topbar {
+    background: #1e293b;
+    border-bottom-color: #334155;
+}
+
+.btn-hamburger {
+    background: transparent;
+    border: none;
+    padding: 0.5rem;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-left: 1rem;
+}
+
+.hamburger-line {
+    width: 24px;
+    height: 2px;
+    background: var(--primary-color);
+    border-radius: 2px;
+    transition: all 0.3s;
+}
+
+body.dark-mode .hamburger-line {
+    background: #e2e8f0;
+}
+
+.btn-hamburger:hover .hamburger-line {
+    background: var(--primary-light);
+}
+
+.btn-hamburger:hover .hamburger-line:nth-child(1) {
+    transform: translateX(-3px);
+}
+
+.btn-hamburger:hover .hamburger-line:nth-child(3) {
+    transform: translateX(3px);
+}
+
+.btn-icon {
+    background: var(--gray-100);
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gray-700);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+
+body.dark-mode .btn-icon {
+    background: #334155;
+    color: #e2e8f0;
+}
+
+.btn-icon:hover {
+    background: var(--primary-light);
+    color: white;
+    transform: scale(1.05);
+}
+
+.notification-badge {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    background: var(--danger-color);
+    color: white;
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.btn-user-menu {
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+}
+
+.user-avatar-sm {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--gray-200);
+}
+
+.user-avatar-sm-placeholder {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--gray-200);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gray-500);
+}
+
+body.dark-mode .user-avatar-sm-placeholder {
+    background: #334155;
+    color: #94a3b8;
+}
+
+/* ==================== Breadcrumb ==================== */
+.breadcrumb-container {
+    padding: 0.75rem 1.5rem;
+    background: white;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+body.dark-mode .breadcrumb-container {
+    background: #1e293b;
+    border-bottom-color: #334155;
+}
+
+body.dark-mode .breadcrumb-item a {
+    color: #60a5fa;
+}
+
+body.dark-mode .breadcrumb-item.active {
+    color: #94a3b8;
+}
+
+/* ==================== Page Content ==================== */
+.page-actions {
+    padding: 1rem 1.5rem;
+}
+
+.page-content {
+    padding: 0 1.5rem 2rem;
+}
+
+/* ==================== Dark Mode ==================== */
+body.dark-mode {
+    background: #0f172a;
+    color: #e2e8f0;
+}
+
+body.dark-mode .card {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+body.dark-mode .card-header {
+    border-bottom-color: #334155;
+}
+
+body.dark-mode .table {
+    color: #e2e8f0;
+}
+
+body.dark-mode .table thead th {
+    background: #334155;
+    color: #e2e8f0;
+}
+
+body.dark-mode .table-hover tbody tr:hover {
+    background: rgba(96, 165, 250, 0.1);
+}
+
+body.dark-mode .form-control,
+body.dark-mode .form-select {
+    background: #1e293b;
+    border-color: #334155;
+    color: #e2e8f0;
+}
+
+body.dark-mode .dropdown-menu {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+body.dark-mode .dropdown-item {
+    color: #e2e8f0;
+}
+
+body.dark-mode .dropdown-item:hover {
+    background: #334155;
+}
+
+/* ==================== Responsive ==================== */
+@media (max-width: 768px) {
+    .topbar {
+        padding: 0.75rem 1rem;
+    }
+    
+    .topbar h5 {
+        font-size: 1rem;
+    }
+    
+    .page-content {
+        padding: 0 1rem 1.5rem;
+    }
+    
+    .breadcrumb-container {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+    }
+}
+</style>
+
+<script>
+// Sidebar Toggle Functions
+function toggleSidebar() {
+    const drawer = document.getElementById('sidebarDrawer');
+    const overlay = document.getElementById('sidebarOverlay');
+    drawer.classList.toggle('open');
+    overlay.classList.toggle('active');
+    document.body.style.overflow = drawer.classList.contains('open') ? 'hidden' : '';
+}
+
+function closeSidebar() {
+    const drawer = document.getElementById('sidebarDrawer');
+    const overlay = document.getElementById('sidebarOverlay');
+    drawer.classList.remove('open');
+    overlay.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+// Theme Toggle
+function toggleTheme() {
+    const body = document.body;
+    const icon = document.getElementById('themeIcon');
+    
+    body.classList.toggle('dark-mode');
+    
+    if (body.classList.contains('dark-mode')) {
+        icon.classList.remove('bi-moon-fill');
+        icon.classList.add('bi-sun-fill');
+        localStorage.setItem('theme', 'dark');
+    } else {
+        icon.classList.remove('bi-sun-fill');
+        icon.classList.add('bi-moon-fill');
+        localStorage.setItem('theme', 'light');
+    }
+}
+
+// Load saved theme
+document.addEventListener('DOMContentLoaded', function() {
+    const savedTheme = localStorage.getItem('theme');
+    const icon = document.getElementById('themeIcon');
+    
+    if (savedTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+        icon.classList.remove('bi-moon-fill');
+        icon.classList.add('bi-sun-fill');
+    }
+});
+
+// Close sidebar on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeSidebar();
+    }
+});
+
+// Close sidebar when clicking outside on mobile
+document.addEventListener('click', function(e) {
+    const drawer = document.getElementById('sidebarDrawer');
+    const hamburger = document.querySelector('.btn-hamburger');
+    
+    if (drawer.classList.contains('open') && 
+        !drawer.contains(e.target) && 
+        !hamburger.contains(e.target)) {
+        closeSidebar();
+    }
+});
+</script>
 {% endblock %}
