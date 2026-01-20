@@ -62,15 +62,19 @@ def dashboard_redirect_view(request):
     """توجيه المستخدم للوحة التحكم المناسبة حسب دوره"""
     user = request.user
     
-    if user.is_admin():
+    # التحقق من الدور أولاً
+    if user.is_admin() or user.is_superuser:
         return redirect('core:admin_dashboard')
     elif user.is_instructor():
         return redirect('core:instructor_dashboard')
     elif user.is_student():
         return redirect('core:student_dashboard')
     else:
+        # إذا لم يكن للمستخدم دور، عرض صفحة خطأ بدلاً من إعادة التوجيه
+        from django.contrib.auth import logout
         messages.error(request, 'لم يتم تحديد دور لحسابك. يرجى التواصل مع الإدارة.')
-        return redirect('core:home')
+        logout(request)
+        return redirect('accounts:login')
 
 
 # ==================== لوحة تحكم Admin ====================

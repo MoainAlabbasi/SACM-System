@@ -105,7 +105,23 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('account_status', 'active')
-        return self.create_user(academic_id, password, **extra_fields)
+        
+        # إنشاء المستخدم أولاً
+        user = self.create_user(academic_id, password, **extra_fields)
+        
+        # تعيين دور Admin تلقائياً إذا لم يكن محدداً
+        if not user.role:
+            try:
+                admin_role, created = Role.objects.get_or_create(
+                    name=Role.ADMIN,
+                    defaults={'description': 'مسؤول النظام'}
+                )
+                user.role = admin_role
+                user.save(update_fields=['role'])
+            except Exception:
+                pass  # تجاهل الخطأ إذا لم يتم إنشاء الدور
+        
+        return user
 
 
 class User(AbstractUser):
