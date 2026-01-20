@@ -11,8 +11,9 @@ from django.db.models import Count, Q
 from django.core.paginator import Paginator
 from django.utils import timezone
 
-from accounts.models import User, Role, Major, Level
+from accounts.models import User, Role, Major, Level, UserActivity
 from .models import Course, Semester, LectureFile, Notification, NotificationRecipient, InstructorCourse
+from .forms import validate_file_content, validate_file_size
 
 
 # ==================== دوال مساعدة ====================
@@ -450,12 +451,36 @@ def instructor_upload_file_view(request, course_id):
             
             if content_type == 'local_file' and request.FILES.get('file'):
                 uploaded_file = request.FILES['file']
+                
+                # التحقق من نوع الملف ومحتواه (الأمان)
+                try:
+                    validate_file_content(uploaded_file)
+                    validate_file_size(uploaded_file, max_size_mb=50)
+                except Exception as validation_error:
+                    messages.error(request, str(validation_error))
+                    return redirect('core:instructor_upload_file', course_id=course.id)
+                
                 lecture_file.file = uploaded_file
                 lecture_file.file_size = uploaded_file.size
             elif content_type == 'external_link':
                 lecture_file.external_url = request.POST.get('external_url')
             
             lecture_file.save()
+            
+            # تسجيل النشاط في UserActivity
+            UserActivity.log(
+                user=request.user,
+                action=UserActivity.FILE_UPLOAD,
+                request=request,
+                details={
+                    'file_id': lecture_file.id,
+                    'file_name': lecture_file.title,
+                    'course_id': course.id,
+                    'course_name': course.name,
+                    'content_type': content_type,
+                    'file_size': lecture_file.file_size
+                }
+            )
             
             # إرسال إشعار للطلاب (باستخدام bulk_create)
             send_file_notification(course, lecture_file, request.user)
@@ -712,6 +737,21 @@ def download_file_view(request, file_id):
     # زيادة عداد التحميلات
     lecture_file.downloads_count += 1
     lecture_file.save(update_fields=['downloads_count'])
+    
+    # تسجيل النشاط في UserActivity (للتقارير)
+    UserActivity.log(
+        user=request.user,
+        action=UserActivity.FILE_DOWNLOAD,
+        request=request,
+        details={
+            'file_id': lecture_file.id,
+            'file_name': lecture_file.title,
+            'course_id': lecture_file.course.id,
+            'course_name': lecture_file.course.name,
+            'content_type': lecture_file.content_type,
+            'file_size': lecture_file.file_size
+        }
+    )
     
     if lecture_file.content_type == 'external_link':
         return redirect(lecture_file.external_url)
