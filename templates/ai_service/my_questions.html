@@ -1,0 +1,66 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}اختباراتي{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'core:student_dashboard' %}" class="nav-link">
+    <i class="bi bi-speedometer2"></i>الرئيسية
+</a>
+<a href="{% url 'core:student_courses' %}" class="nav-link">
+    <i class="bi bi-book"></i>مقرراتي
+</a>
+<a href="{% url 'core:student_notifications' %}" class="nav-link">
+    <i class="bi bi-bell"></i>الإشعارات
+</a>
+<a href="{% url 'ai_service:my_summaries' %}" class="nav-link">
+    <i class="bi bi-file-text"></i>الملخصات
+</a>
+<a href="{% url 'ai_service:my_questions' %}" class="nav-link active">
+    <i class="bi bi-question-circle"></i>الاختبارات
+</a>
+{% endblock %}
+
+{% block page_title %}اختباراتي{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">الاختبارات</li>
+{% endblock %}
+
+{% block page_content %}
+<div class="row g-4">
+    {% for ai_questions in questions %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="badge bg-primary">{{ ai_questions.file.course.name }}</span>
+                <span class="badge bg-info">{{ ai_questions.questions_count }} سؤال</span>
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">{{ ai_questions.file.title }}</h5>
+                <p class="card-text small text-muted">
+                    تم الإنشاء: {{ ai_questions.generated_at|date:"Y/m/d H:i" }}
+                </p>
+                <span class="badge bg-secondary">{{ ai_questions.get_difficulty_display }}</span>
+            </div>
+            <div class="card-footer bg-transparent">
+                <a href="{% url 'ai_service:view_questions' ai_questions.id %}" class="btn btn-primary btn-sm w-100">
+                    <i class="bi bi-play-fill me-1"></i>بدء الاختبار
+                </a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <div class="empty-state">
+                    <i class="bi bi-question-circle"></i>
+                    <p>لا يوجد اختبارات</p>
+                    <p class="text-muted small">يمكنك إنشاء اختبار من أي ملف عبر زر "توليد أسئلة"</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

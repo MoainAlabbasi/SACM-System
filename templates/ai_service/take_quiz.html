@@ -1,0 +1,90 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}اختبار - {{ quiz.file.title }}{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'core:student_dashboard' %}" class="nav-link">
+    <i class="bi bi-speedometer2"></i>الرئيسية
+</a>
+<a href="{% url 'core:student_courses' %}" class="nav-link">
+    <i class="bi bi-book"></i>مقرراتي
+</a>
+<a href="{% url 'core:student_notifications' %}" class="nav-link">
+    <i class="bi bi-bell"></i>الإشعارات
+</a>
+<a href="{% url 'core:student_summaries' %}" class="nav-link">
+    <i class="bi bi-file-text"></i>الملخصات
+</a>
+<a href="{% url 'core:student_quizzes' %}" class="nav-link active">
+    <i class="bi bi-question-circle"></i>الاختبارات
+</a>
+{% endblock %}
+
+{% block page_title %}{{ quiz.file.title }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'core:student_quizzes' %}">الاختبارات</a></li>
+<li class="breadcrumb-item active">الاختبار</li>
+{% endblock %}
+
+{% block page_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-1">{{ quiz.file.course.name }}</h5>
+                        <p class="text-muted mb-0">{{ quiz.questions.count }} سؤال</p>
+                    </div>
+                    <div class="badge bg-primary fs-6" id="timer">00:00</div>
+                </div>
+            </div>
+        </div>
+        
+        <form method="post" id="quizForm">
+            {% csrf_token %}
+            
+            {% for question in questions %}
+            <div class="card mb-4 question-card" data-question="{{ forloop.counter }}">
+                <div class="card-header">
+                    <span class="badge bg-secondary me-2">{{ forloop.counter }}</span>
+                    {{ question.question_text }}
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for choice in question.choices %}
+                        <label class="list-group-item list-group-item-action">
+                            <input type="radio" name="q_{{ question.id }}" value="{{ forloop.counter0 }}" class="form-check-input me-2" required>
+                            {{ choice }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            
+            <div class="card">
+                <div class="card-body text-center">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-check-circle me-2"></i>إرسال الإجابات
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Timer
+let seconds = 0;
+const timerEl = document.getElementById('timer');
+
+setInterval(() => {
+    seconds++;
+    const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const secs = (seconds % 60).toString().padStart(2, '0');
+    timerEl.textContent = `${mins}:${secs}`;
+}, 1000);
+</script>
+{% endblock %}

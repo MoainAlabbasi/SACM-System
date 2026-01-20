@@ -1,0 +1,68 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}ترقية الطلاب{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'core:admin_dashboard' %}" class="nav-link">
+    <i class="bi bi-speedometer2"></i>الرئيسية
+</a>
+<a href="{% url 'core:admin_users' %}" class="nav-link">
+    <i class="bi bi-people"></i>المستخدمين
+</a>
+<a href="{% url 'core:admin_courses' %}" class="nav-link">
+    <i class="bi bi-book"></i>المقررات
+</a>
+<a href="{% url 'core:admin_semesters' %}" class="nav-link">
+    <i class="bi bi-calendar3"></i>الفصول الدراسية
+</a>
+<a href="{% url 'core:admin_majors' %}" class="nav-link">
+    <i class="bi bi-diagram-3"></i>التخصصات
+</a>
+<a href="{% url 'core:admin_levels' %}" class="nav-link">
+    <i class="bi bi-layers"></i>المستويات
+</a>
+<hr class="my-3">
+<a href="{% url 'core:admin_promote_students' %}" class="nav-link active">
+    <i class="bi bi-arrow-up-circle"></i>ترقية الطلاب
+</a>
+{% endblock %}
+
+{% block page_title %}ترقية الطلاب{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">ترقية الطلاب</li>
+{% endblock %}
+
+{% block page_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <div class="rounded-circle bg-warning bg-opacity-10 d-inline-flex p-4 mb-4">
+                    <i class="bi bi-arrow-up-circle text-warning" style="font-size: 3rem;"></i>
+                </div>
+                
+                <h4 class="mb-3">ترقية جميع الطلاب للمستوى التالي</h4>
+                
+                <p class="text-muted mb-4">
+                    سيتم ترقية جميع الطلاب المسجلين في النظام إلى المستوى التالي.
+                    <br>
+                    <strong>عدد الطلاب المتأثرين: {{ students_count }}</strong>
+                </p>
+                
+                <div class="alert alert-warning text-start">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>تحذير:</strong> هذا الإجراء لا يمكن التراجع عنه. تأكد من أنك تريد ترقية جميع الطلاب.
+                </div>
+                
+                <form method="post" onsubmit="return confirm('هل أنت متأكد من ترقية جميع الطلاب؟');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-warning btn-lg">
+                        <i class="bi bi-arrow-up me-2"></i>ترقية الطلاب
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

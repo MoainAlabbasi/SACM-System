@@ -1,0 +1,121 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}لوحة تحكم المدرس{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'core:instructor_dashboard' %}" class="nav-link active">
+    <i class="bi bi-speedometer2"></i>الرئيسية
+</a>
+<a href="{% url 'core:instructor_courses' %}" class="nav-link">
+    <i class="bi bi-book"></i>مقرراتي
+</a>
+{% endblock %}
+
+{% block page_title %}لوحة التحكم{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">لوحة التحكم</li>
+{% endblock %}
+
+{% block page_content %}
+<!-- Stats Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card primary">
+            <i class="bi bi-book stat-icon"></i>
+            <div class="stat-value">{{ my_courses.count }}</div>
+            <div class="stat-label">مقرراتي</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card secondary">
+            <i class="bi bi-file-earmark stat-icon"></i>
+            <div class="stat-value">{{ my_files_count }}</div>
+            <div class="stat-label">الملفات المرفوعة</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card accent">
+            <i class="bi bi-eye stat-icon"></i>
+            <div class="stat-value">{{ total_views }}</div>
+            <div class="stat-label">المشاهدات</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card danger">
+            <i class="bi bi-download stat-icon"></i>
+            <div class="stat-value">{{ total_downloads }}</div>
+            <div class="stat-label">التحميلات</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- My Courses -->
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-book me-2"></i>مقرراتي</span>
+                <a href="{% url 'core:instructor_courses' %}" class="btn btn-sm btn-outline-primary">عرض الكل</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for course in my_courses %}
+                    <a href="{% url 'core:instructor_course_files' course.id %}" class="list-group-item list-group-item-action">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ course.name }}</strong>
+                                <br><small class="text-muted">{{ course.code }}</small>
+                            </div>
+                            <i class="bi bi-chevron-left text-muted"></i>
+                        </div>
+                    </a>
+                    {% empty %}
+                    <div class="text-center py-4 text-muted">
+                        لا يوجد مقررات مسندة إليك
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Files -->
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-file-earmark me-2"></i>أحدث الملفات
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>الملف</th>
+                                <th>المقرر</th>
+                                <th>التاريخ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for file in recent_files %}
+                            <tr>
+                                <td>
+                                    <strong>{{ file.title }}</strong>
+                                    <br><small class="text-muted">{{ file.get_file_type_display }}</small>
+                                </td>
+                                <td>{{ file.course.name }}</td>
+                                <td>{{ file.upload_date|date:"Y/m/d" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center py-4 text-muted">لا يوجد ملفات</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

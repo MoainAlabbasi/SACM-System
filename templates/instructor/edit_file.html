@@ -1,0 +1,72 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}تعديل الملف{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'core:instructor_dashboard' %}" class="nav-link">
+    <i class="bi bi-speedometer2"></i>الرئيسية
+</a>
+<a href="{% url 'core:instructor_courses' %}" class="nav-link active">
+    <i class="bi bi-book"></i>مقرراتي
+</a>
+{% endblock %}
+
+{% block page_title %}تعديل الملف{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'core:instructor_courses' %}">المقررات</a></li>
+<li class="breadcrumb-item"><a href="{% url 'core:instructor_course_files' file.course.id %}">{{ file.course.name }}</a></li>
+<li class="breadcrumb-item active">تعديل</li>
+{% endblock %}
+
+{% block page_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label class="form-label">عنوان الملف <span class="text-danger">*</span></label>
+                        <input type="text" name="title" class="form-control" value="{{ file.title }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">الوصف</label>
+                        <textarea name="description" class="form-control" rows="3">{{ file.description }}</textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">نوع الملف</label>
+                        <select name="file_type" class="form-select">
+                            <option value="lecture" {% if file.file_type == 'lecture' %}selected{% endif %}>محاضرة</option>
+                            <option value="summary" {% if file.file_type == 'summary' %}selected{% endif %}>ملخص</option>
+                            <option value="assignment" {% if file.file_type == 'assignment' %}selected{% endif %}>واجب</option>
+                            <option value="exam" {% if file.file_type == 'exam' %}selected{% endif %}>اختبار</option>
+                            <option value="reference" {% if file.file_type == 'reference' %}selected{% endif %}>مرجع</option>
+                            <option value="other" {% if file.file_type == 'other' %}selected{% endif %}>أخرى</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="form-check">
+                            <input type="checkbox" name="is_visible" class="form-check-input" id="isVisible" {% if file.is_visible %}checked{% endif %}>
+                            <label class="form-check-label" for="isVisible">مرئي للطلاب</label>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i>حفظ التغييرات
+                        </button>
+                        <a href="{% url 'core:instructor_course_files' file.course.id %}" class="btn btn-outline-secondary">
+                            إلغاء
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

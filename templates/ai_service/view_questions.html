@@ -1,0 +1,174 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}اختبار - {{ ai_questions.file.title }}{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'core:student_dashboard' %}" class="nav-link">
+    <i class="bi bi-speedometer2"></i>الرئيسية
+</a>
+<a href="{% url 'core:student_courses' %}" class="nav-link">
+    <i class="bi bi-book"></i>مقرراتي
+</a>
+<a href="{% url 'core:student_notifications' %}" class="nav-link">
+    <i class="bi bi-bell"></i>الإشعارات
+</a>
+<a href="{% url 'ai_service:my_summaries' %}" class="nav-link">
+    <i class="bi bi-file-text"></i>الملخصات
+</a>
+<a href="{% url 'ai_service:my_questions' %}" class="nav-link active">
+    <i class="bi bi-question-circle"></i>الاختبارات
+</a>
+{% endblock %}
+
+{% block page_title %}{{ ai_questions.file.title }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'ai_service:my_questions' %}">الاختبارات</a></li>
+<li class="breadcrumb-item active">الاختبار</li>
+{% endblock %}
+
+{% block page_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- معلومات الاختبار -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-1">{{ ai_questions.file.course.name }}</h5>
+                        <p class="text-muted mb-0">{{ ai_questions.questions_count }} سؤال • {{ ai_questions.get_difficulty_display }}</p>
+                    </div>
+                    <div class="badge bg-primary fs-6" id="timer">00:00</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- الأسئلة -->
+        <form id="quizForm">
+            {% for question in ai_questions.questions_json %}
+            <div class="card mb-4 question-card" data-question="{{ forloop.counter }}">
+                <div class="card-header">
+                    <span class="badge bg-secondary me-2">{{ forloop.counter }}</span>
+                    {{ question.question }}
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for option in question.options %}
+                        <label class="list-group-item list-group-item-action">
+                            <input type="radio" 
+                                   name="q_{{ forloop.parentloop.counter }}" 
+                                   value="{{ option }}" 
+                                   data-correct="{{ question.correct_answer }}"
+                                   class="form-check-input me-2">
+                            {{ option }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            
+            <div class="card">
+                <div class="card-body text-center">
+                    <button type="button" class="btn btn-primary btn-lg" onclick="checkAnswers()">
+                        <i class="bi bi-check-circle me-2"></i>تحقق من الإجابات
+                    </button>
+                </div>
+            </div>
+        </form>
+        
+        <!-- النتيجة -->
+        <div id="resultCard" class="card mt-4 d-none">
+            <div class="card-body text-center py-5">
+                <div id="resultIcon" class="rounded-circle d-inline-flex align-items-center justify-content-center mb-4"
+                    style="width: 150px; height: 150px;">
+                </div>
+                
+                <h3 id="resultText" class="mb-2"></h3>
+                <p id="resultScore" class="text-muted mb-4"></p>
+                
+                <div class="d-flex gap-2 justify-content-center">
+                    <button type="button" class="btn btn-primary" onclick="location.reload()">
+                        <i class="bi bi-arrow-repeat me-1"></i>إعادة الاختبار
+                    </button>
+                    <a href="{% url 'ai_service:my_questions' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-list me-1"></i>كل الاختبارات
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Timer
+let seconds = 0;
+const timerEl = document.getElementById('timer');
+
+const timerInterval = setInterval(() => {
+    seconds++;
+    const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const secs = (seconds % 60).toString().padStart(2, '0');
+    timerEl.textContent = `${mins}:${secs}`;
+}, 1000);
+
+function checkAnswers() {
+    clearInterval(timerInterval);
+    
+    const form = document.getElementById('quizForm');
+    const questions = form.querySelectorAll('.question-card');
+    let correct = 0;
+    let total = questions.length;
+    
+    questions.forEach((card, index) => {
+        const selected = card.querySelector('input:checked');
+        const correctAnswer = card.querySelector('input').dataset.correct;
+        
+        if (selected) {
+            if (selected.value === correctAnswer) {
+                correct++;
+                card.classList.add('border-success');
+            } else {
+                card.classList.add('border-danger');
+            }
+        } else {
+            card.classList.add('border-warning');
+        }
+        
+        // تعطيل الإجابات
+        card.querySelectorAll('input').forEach(input => {
+            input.disabled = true;
+            if (input.value === correctAnswer) {
+                input.parentElement.classList.add('list-group-item-success');
+            }
+        });
+    });
+    
+    // عرض النتيجة
+    const percentage = Math.round((correct / total) * 100);
+    const resultCard = document.getElementById('resultCard');
+    const resultIcon = document.getElementById('resultIcon');
+    const resultText = document.getElementById('resultText');
+    const resultScore = document.getElementById('resultScore');
+    
+    resultCard.classList.remove('d-none');
+    resultScore.textContent = `${correct} من ${total} إجابات صحيحة`;
+    
+    if (percentage >= 80) {
+        resultIcon.className = 'rounded-circle d-inline-flex align-items-center justify-content-center mb-4 bg-success bg-opacity-10';
+        resultIcon.innerHTML = '<span class="display-4 text-success">' + percentage + '%</span>';
+        resultText.textContent = 'ممتاز! أداء رائع!';
+    } else if (percentage >= 60) {
+        resultIcon.className = 'rounded-circle d-inline-flex align-items-center justify-content-center mb-4 bg-warning bg-opacity-10';
+        resultIcon.innerHTML = '<span class="display-4 text-warning">' + percentage + '%</span>';
+        resultText.textContent = 'جيد! يمكنك التحسن أكثر.';
+    } else {
+        resultIcon.className = 'rounded-circle d-inline-flex align-items-center justify-content-center mb-4 bg-danger bg-opacity-10';
+        resultIcon.innerHTML = '<span class="display-4 text-danger">' + percentage + '%</span>';
+        resultText.textContent = 'تحتاج لمراجعة المادة.';
+    }
+    
+    resultCard.scrollIntoView({ behavior: 'smooth' });
+}
+</script>
+{% endblock %}

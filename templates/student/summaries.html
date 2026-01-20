@@ -1,0 +1,94 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}الملخصات{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'core:student_dashboard' %}" class="nav-link">
+    <i class="bi bi-speedometer2"></i>الرئيسية
+</a>
+<a href="{% url 'core:student_courses' %}" class="nav-link">
+    <i class="bi bi-book"></i>مقرراتي
+</a>
+<a href="{% url 'core:student_notifications' %}" class="nav-link">
+    <i class="bi bi-bell"></i>الإشعارات
+</a>
+<a href="{% url 'core:student_summaries' %}" class="nav-link active">
+    <i class="bi bi-file-text"></i>الملخصات
+</a>
+<a href="{% url 'core:student_quizzes' %}" class="nav-link">
+    <i class="bi bi-question-circle"></i>الاختبارات
+</a>
+{% endblock %}
+
+{% block page_title %}ملخصاتي{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">الملخصات</li>
+{% endblock %}
+
+{% block page_content %}
+<div class="row g-4">
+    {% for summary in summaries %}
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="badge bg-primary">{{ summary.file.course.name }}</span>
+                <small class="text-muted">{{ summary.created_at|date:"Y/m/d" }}</small>
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">{{ summary.file.title }}</h5>
+                <p class="card-text text-muted">
+                    {{ summary.summary_text|truncatewords:30 }}
+                </p>
+            </div>
+            <div class="card-footer bg-transparent">
+                <div class="d-flex gap-2">
+                    <a href="{% url 'ai_service:view_summary' summary.id %}" class="btn btn-primary btn-sm flex-grow-1">
+                        <i class="bi bi-eye me-1"></i>عرض الملخص
+                    </a>
+                    <a href="{% url 'ai_service:download_summary' summary.id %}" class="btn btn-outline-success btn-sm">
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <div class="empty-state">
+                    <i class="bi bi-file-text"></i>
+                    <p>لا يوجد ملخصات</p>
+                    <p class="text-muted small">يمكنك إنشاء ملخص من أي ملف عبر زر "تلخيص AI"</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if summaries.has_other_pages %}
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if summaries.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ summaries.previous_page_number }}">السابق</a>
+        </li>
+        {% endif %}
+        
+        {% for num in summaries.paginator.page_range %}
+        <li class="page-item {% if summaries.number == num %}active{% endif %}">
+            <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+        </li>
+        {% endfor %}
+        
+        {% if summaries.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ summaries.next_page_number }}">التالي</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

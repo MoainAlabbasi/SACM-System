@@ -1,0 +1,137 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}{{ course.name }}{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'core:student_dashboard' %}" class="nav-link">
+    <i class="bi bi-speedometer2"></i>الرئيسية
+</a>
+<a href="{% url 'core:student_courses' %}" class="nav-link active">
+    <i class="bi bi-book"></i>مقرراتي
+</a>
+<a href="{% url 'core:student_notifications' %}" class="nav-link">
+    <i class="bi bi-bell"></i>الإشعارات
+</a>
+<a href="{% url 'core:student_summaries' %}" class="nav-link">
+    <i class="bi bi-file-text"></i>الملخصات
+</a>
+<a href="{% url 'core:student_quizzes' %}" class="nav-link">
+    <i class="bi bi-question-circle"></i>الاختبارات
+</a>
+{% endblock %}
+
+{% block page_title %}{{ course.name }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'core:student_courses' %}">مقرراتي</a></li>
+<li class="breadcrumb-item active">{{ course.name }}</li>
+{% endblock %}
+
+{% block page_content %}
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h5 class="mb-1">{{ course.name }}</h5>
+                <p class="text-muted mb-0">{{ course.description|default:"لا يوجد وصف" }}</p>
+                {% if course.instructors.all %}
+                <p class="small text-muted mt-2 mb-0">
+                    <i class="bi bi-person me-1"></i>
+                    {% for instructor in course.instructors.all %}
+                    {{ instructor.full_name }}{% if not forloop.last %}، {% endif %}
+                    {% endfor %}
+                </p>
+                {% endif %}
+            </div>
+            <div class="col-md-4 text-md-end">
+                <span class="badge bg-primary">{{ course.level.name }}</span>
+                <span class="badge bg-secondary">{{ course.semester.name }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter by Type -->
+<div class="card mb-4">
+    <div class="card-body py-2">
+        <div class="d-flex flex-wrap gap-2">
+            <a href="?type=" class="btn btn-sm {% if not request.GET.type %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                الكل
+            </a>
+            <a href="?type=lecture" class="btn btn-sm {% if request.GET.type == 'lecture' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                محاضرات
+            </a>
+            <a href="?type=assignment" class="btn btn-sm {% if request.GET.type == 'assignment' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                واجبات
+            </a>
+            <a href="?type=exam" class="btn btn-sm {% if request.GET.type == 'exam' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                اختبارات
+            </a>
+            <a href="?type=resource" class="btn btn-sm {% if request.GET.type == 'resource' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                مراجع
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-folder me-2"></i>الملفات ({{ files.count }})
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>الملف</th>
+                        <th>النوع</th>
+                        <th>التاريخ</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for file in files %}
+                    <tr>
+                        <td>
+                            <strong>{{ file.title }}</strong>
+                            {% if file.description %}
+                            <br><small class="text-muted">{{ file.description|truncatewords:10 }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-info">{{ file.get_file_type_display }}</span>
+                        </td>
+                        <td>{{ file.upload_date|date:"Y/m/d" }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'core:view_file' file.id %}" class="btn btn-outline-primary" title="عرض">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'core:download_file' file.id %}" class="btn btn-outline-success" title="تحميل">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                                <a href="{% url 'ai_service:summarize' file.id %}" class="btn btn-outline-info" title="تلخيص AI">
+                                    <i class="bi bi-robot"></i>
+                                </a>
+                                <a href="{% url 'ai_service:generate_quiz' file.id %}" class="btn btn-outline-warning" title="إنشاء اختبار">
+                                    <i class="bi bi-question-circle"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center py-5">
+                            <div class="empty-state">
+                                <i class="bi bi-folder"></i>
+                                <p>لا يوجد ملفات في هذا المقرر</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,112 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}نتيجة الاختبار{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'core:student_dashboard' %}" class="nav-link">
+    <i class="bi bi-speedometer2"></i>الرئيسية
+</a>
+<a href="{% url 'core:student_courses' %}" class="nav-link">
+    <i class="bi bi-book"></i>مقرراتي
+</a>
+<a href="{% url 'core:student_notifications' %}" class="nav-link">
+    <i class="bi bi-bell"></i>الإشعارات
+</a>
+<a href="{% url 'core:student_summaries' %}" class="nav-link">
+    <i class="bi bi-file-text"></i>الملخصات
+</a>
+<a href="{% url 'core:student_quizzes' %}" class="nav-link active">
+    <i class="bi bi-question-circle"></i>الاختبارات
+</a>
+{% endblock %}
+
+{% block page_title %}نتيجة الاختبار{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'core:student_quizzes' %}">الاختبارات</a></li>
+<li class="breadcrumb-item active">النتيجة</li>
+{% endblock %}
+
+{% block page_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- Score Card -->
+        <div class="card mb-4">
+            <div class="card-body text-center py-5">
+                <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-4 
+                    {% if percentage >= 80 %}bg-success{% elif percentage >= 60 %}bg-warning{% else %}bg-danger{% endif %} bg-opacity-10"
+                    style="width: 150px; height: 150px;">
+                    <div>
+                        <h1 class="display-4 mb-0 {% if percentage >= 80 %}text-success{% elif percentage >= 60 %}text-warning{% else %}text-danger{% endif %}">
+                            {{ percentage }}%
+                        </h1>
+                    </div>
+                </div>
+                
+                <h3 class="mb-2">{{ correct_count }} من {{ total_count }}</h3>
+                <p class="text-muted mb-4">إجابات صحيحة</p>
+                
+                {% if percentage >= 80 %}
+                <div class="alert alert-success">
+                    <i class="bi bi-trophy me-2"></i>ممتاز! أداء رائع!
+                </div>
+                {% elif percentage >= 60 %}
+                <div class="alert alert-warning">
+                    <i class="bi bi-emoji-smile me-2"></i>جيد! يمكنك التحسن أكثر.
+                </div>
+                {% else %}
+                <div class="alert alert-danger">
+                    <i class="bi bi-book me-2"></i>تحتاج لمراجعة المادة مرة أخرى.
+                </div>
+                {% endif %}
+                
+                <div class="d-flex gap-2 justify-content-center">
+                    <a href="{% url 'ai_service:take_quiz' quiz.id %}" class="btn btn-primary">
+                        <i class="bi bi-arrow-repeat me-1"></i>إعادة الاختبار
+                    </a>
+                    <a href="{% url 'core:student_quizzes' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-list me-1"></i>كل الاختبارات
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Answers Review -->
+        <h5 class="mb-3"><i class="bi bi-list-check me-2"></i>مراجعة الإجابات</h5>
+        
+        {% for result in results %}
+        <div class="card mb-3 {% if result.is_correct %}border-success{% else %}border-danger{% endif %}">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>
+                    <span class="badge {% if result.is_correct %}bg-success{% else %}bg-danger{% endif %} me-2">
+                        {{ forloop.counter }}
+                    </span>
+                    {{ result.question.question_text }}
+                </span>
+                {% if result.is_correct %}
+                <i class="bi bi-check-circle-fill text-success"></i>
+                {% else %}
+                <i class="bi bi-x-circle-fill text-danger"></i>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>إجابتك:</strong></p>
+                        <p class="{% if result.is_correct %}text-success{% else %}text-danger{% endif %}">
+                            {{ result.user_answer }}
+                        </p>
+                    </div>
+                    {% if not result.is_correct %}
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>الإجابة الصحيحة:</strong></p>
+                        <p class="text-success">{{ result.correct_answer }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

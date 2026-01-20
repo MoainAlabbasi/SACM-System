@@ -1,0 +1,122 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}إدارة المقررات{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'core:admin_dashboard' %}" class="nav-link">
+    <i class="bi bi-speedometer2"></i>الرئيسية
+</a>
+<a href="{% url 'core:admin_users' %}" class="nav-link">
+    <i class="bi bi-people"></i>المستخدمين
+</a>
+<a href="{% url 'core:admin_courses' %}" class="nav-link active">
+    <i class="bi bi-book"></i>المقررات
+</a>
+<a href="{% url 'core:admin_semesters' %}" class="nav-link">
+    <i class="bi bi-calendar3"></i>الفصول الدراسية
+</a>
+<a href="{% url 'core:admin_majors' %}" class="nav-link">
+    <i class="bi bi-diagram-3"></i>التخصصات
+</a>
+<a href="{% url 'core:admin_levels' %}" class="nav-link">
+    <i class="bi bi-layers"></i>المستويات
+</a>
+{% endblock %}
+
+{% block page_title %}إدارة المقررات{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">المقررات</li>
+{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'core:admin_add_course' %}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i>إضافة مقرر
+</a>
+{% endblock %}
+
+{% block page_content %}
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>المقرر</th>
+                        <th>الرمز</th>
+                        <th>المستوى</th>
+                        <th>الفصل</th>
+                        <th>المدرسين</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for course in courses %}
+                    <tr>
+                        <td>
+                            <strong>{{ course.name }}</strong>
+                            {% if course.description %}
+                            <br><small class="text-muted">{{ course.description|truncatewords:10 }}</small>
+                            {% endif %}
+                        </td>
+                        <td><code>{{ course.code }}</code></td>
+                        <td>{{ course.level.name|default:"-" }}</td>
+                        <td>{{ course.semester.name|default:"-" }}</td>
+                        <td>
+                            {% for instructor in course.instructors.all %}
+                            <span class="badge bg-primary">{{ instructor.full_name }}</span>
+                            {% empty %}
+                            <span class="text-muted">-</span>
+                            {% endfor %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" title="تعديل">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-outline-danger" title="حذف">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5">
+                            <div class="empty-state">
+                                <i class="bi bi-book"></i>
+                                <p>لا يوجد مقررات</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if courses.has_other_pages %}
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if courses.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ courses.previous_page_number }}">السابق</a>
+        </li>
+        {% endif %}
+        
+        {% for num in courses.paginator.page_range %}
+        <li class="page-item {% if courses.number == num %}active{% endif %}">
+            <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+        </li>
+        {% endfor %}
+        
+        {% if courses.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ courses.next_page_number }}">التالي</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

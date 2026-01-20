@@ -1,0 +1,158 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}رفع ملف{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'core:instructor_dashboard' %}" class="nav-link">
+    <i class="bi bi-speedometer2"></i>الرئيسية
+</a>
+<a href="{% url 'core:instructor_courses' %}" class="nav-link active">
+    <i class="bi bi-book"></i>مقرراتي
+</a>
+{% endblock %}
+
+{% block page_title %}رفع ملف جديد{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'core:instructor_courses' %}">مقرراتي</a></li>
+<li class="breadcrumb-item"><a href="{% url 'core:instructor_course_files' course.id %}">{{ course.name }}</a></li>
+<li class="breadcrumb-item active">رفع ملف</li>
+{% endblock %}
+
+{% block page_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="mb-4">
+                        <label class="form-label">عنوان الملف <span class="text-danger">*</span></label>
+                        <input type="text" name="title" class="form-control" required>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label">الوصف</label>
+                        <textarea name="description" class="form-control" rows="3" placeholder="وصف اختياري للملف..."></textarea>
+                    </div>
+                    
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">نوع الملف <span class="text-danger">*</span></label>
+                            <select name="file_type" class="form-select" required>
+                                <option value="">اختر النوع</option>
+                                <option value="lecture">محاضرة</option>
+                                <option value="assignment">واجب</option>
+                                <option value="exam">اختبار</option>
+                                <option value="resource">مرجع</option>
+                                <option value="other">أخرى</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">رقم المحاضرة</label>
+                            <input type="number" name="lecture_number" class="form-control" min="1" placeholder="اختياري">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label">الملف <span class="text-danger">*</span></label>
+                        <div class="upload-area" id="uploadArea">
+                            <input type="file" name="file" id="fileInput" class="d-none" required>
+                            <div class="text-center py-5">
+                                <i class="bi bi-cloud-upload display-4 text-muted mb-3"></i>
+                                <p class="mb-2">اسحب الملف هنا أو</p>
+                                <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('fileInput').click();">
+                                    اختر ملف
+                                </button>
+                                <p class="text-muted small mt-2 mb-0">PDF, DOCX, PPTX, MP4, ZIP (حتى 100MB)</p>
+                            </div>
+                        </div>
+                        <div id="filePreview" class="mt-2 d-none">
+                            <div class="alert alert-info d-flex align-items-center">
+                                <i class="bi bi-file-earmark me-2"></i>
+                                <span id="fileName"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-check mb-4">
+                        <input class="form-check-input" type="checkbox" name="is_visible" id="isVisible" checked>
+                        <label class="form-check-label" for="isVisible">
+                            مرئي للطلاب
+                        </label>
+                    </div>
+                    
+                    <div class="form-check mb-4">
+                        <input class="form-check-input" type="checkbox" name="notify_students" id="notifyStudents" checked>
+                        <label class="form-check-label" for="notifyStudents">
+                            إرسال إشعار للطلاب
+                        </label>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-upload me-1"></i>رفع الملف
+                        </button>
+                        <a href="{% url 'core:instructor_course_files' course.id %}" class="btn btn-outline-secondary">
+                            إلغاء
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.upload-area {
+    border: 2px dashed var(--border-color);
+    border-radius: 0.5rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+.upload-area:hover, .upload-area.dragover {
+    border-color: var(--primary-color);
+    background: rgba(37, 99, 235, 0.05);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const filePreview = document.getElementById('filePreview');
+    const fileName = document.getElementById('fileName');
+    
+    uploadArea.addEventListener('click', () => fileInput.click());
+    
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+    
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('dragover');
+    });
+    
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        fileInput.files = e.dataTransfer.files;
+        updatePreview();
+    });
+    
+    fileInput.addEventListener('change', updatePreview);
+    
+    function updatePreview() {
+        if (fileInput.files.length > 0) {
+            fileName.textContent = fileInput.files[0].name;
+            filePreview.classList.remove('d-none');
+        }
+    }
+});
+</script>
+{% endblock %}

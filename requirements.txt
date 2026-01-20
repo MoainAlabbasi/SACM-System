@@ -1,0 +1,50 @@
+# ==========================================
+# S-ACM - نظام إدارة المحتوى الأكاديمي الذكي
+# Requirements File
+# ==========================================
+
+# Django Framework
+Django>=5.0,<6.0
+
+# Database
+# SQLite3 مدمج مع Python (افتراضي)
+# للتبديل لـ PostgreSQL:
+# psycopg2-binary>=2.9.9
+
+# Environment Variables
+python-dotenv>=1.0.0
+
+# ==========================================
+# Google Gemini AI (المكتبة الجديدة)
+# ==========================================
+google-genai>=1.0.0
+
+# ==========================================
+# HTMX Integration (جديد)
+# ==========================================
+django-htmx>=1.17.0
+
+# ==========================================
+# File Processing
+# ==========================================
+PyPDF2>=3.0.0
+python-docx>=1.1.0
+openpyxl>=3.1.0
+python-pptx>=0.6.23
+
+# Markdown
+markdown>=3.5.0
+
+# Image Processing
+Pillow>=10.0.0
+
+# Security
+django-cors-headers>=4.3.0
+bleach>=6.1.0
+
+# Development
+django-debug-toolbar>=4.2.0
+
+# Testing
+pytest>=7.4.0
+pytest-django>=4.5.0

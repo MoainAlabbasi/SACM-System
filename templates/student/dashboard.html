@@ -1,0 +1,171 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}لوحة تحكم الطالب{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'core:student_dashboard' %}" class="nav-link active">
+    <i class="bi bi-speedometer2"></i>الرئيسية
+</a>
+<a href="{% url 'core:student_courses' %}" class="nav-link">
+    <i class="bi bi-book"></i>مقرراتي
+</a>
+<a href="{% url 'core:student_notifications' %}" class="nav-link">
+    <i class="bi bi-bell"></i>الإشعارات
+    {% if unread_notifications_count %}
+    <span class="badge bg-danger">{{ unread_notifications_count }}</span>
+    {% endif %}
+</a>
+<a href="{% url 'core:student_summaries' %}" class="nav-link">
+    <i class="bi bi-file-text"></i>الملخصات
+</a>
+<a href="{% url 'core:student_quizzes' %}" class="nav-link">
+    <i class="bi bi-question-circle"></i>الاختبارات
+</a>
+{% endblock %}
+
+{% block page_title %}مرحباً {{ user.full_name }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">لوحة التحكم</li>
+{% endblock %}
+
+{% block page_content %}
+<!-- Stats Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card primary">
+            <i class="bi bi-book stat-icon"></i>
+            <div class="stat-value">{{ my_courses_count }}</div>
+            <div class="stat-label">مقرراتي</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card secondary">
+            <i class="bi bi-file-earmark stat-icon"></i>
+            <div class="stat-value">{{ available_files_count }}</div>
+            <div class="stat-label">الملفات المتاحة</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card accent">
+            <i class="bi bi-file-text stat-icon"></i>
+            <div class="stat-value">{{ summaries_count }}</div>
+            <div class="stat-label">الملخصات</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card danger">
+            <i class="bi bi-bell stat-icon"></i>
+            <div class="stat-value">{{ unread_notifications_count }}</div>
+            <div class="stat-label">إشعارات جديدة</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Recent Files -->
+    <div class="col-lg-8">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-file-earmark me-2"></i>أحدث الملفات</span>
+                <a href="{% url 'core:student_courses' %}" class="btn btn-sm btn-outline-primary">عرض الكل</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>الملف</th>
+                                <th>المقرر</th>
+                                <th>النوع</th>
+                                <th>التاريخ</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for file in recent_files %}
+                            <tr>
+                                <td>
+                                    <strong>{{ file.title }}</strong>
+                                </td>
+                                <td>{{ file.course.name }}</td>
+                                <td>
+                                    <span class="badge bg-info">{{ file.get_file_type_display }}</span>
+                                </td>
+                                <td>{{ file.upload_date|date:"Y/m/d" }}</td>
+                                <td>
+                                    <a href="{% url 'core:view_file' file.id %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">لا يوجد ملفات جديدة</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notifications -->
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-bell me-2"></i>الإشعارات</span>
+                <a href="{% url 'core:student_notifications' %}" class="btn btn-sm btn-outline-primary">الكل</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for notification in notifications %}
+                    <a href="{% url 'core:student_notification_detail' notification.id %}" 
+                       class="list-group-item list-group-item-action {% if not notification.is_read %}bg-light{% endif %}">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ notification.title }}</h6>
+                            {% if not notification.is_read %}
+                            <span class="badge bg-primary">جديد</span>
+                            {% endif %}
+                        </div>
+                        <small class="text-muted">{{ notification.created_at|timesince }} مضت</small>
+                    </a>
+                    {% empty %}
+                    <div class="text-center py-4 text-muted">
+                        لا يوجد إشعارات
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- My Courses -->
+<div class="card mt-4">
+    <div class="card-header">
+        <i class="bi bi-book me-2"></i>مقرراتي
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            {% for course in my_courses %}
+            <div class="col-md-4">
+                <a href="{% url 'core:student_course_files' course.id %}" class="text-decoration-none">
+                    <div class="card h-100 border-0 bg-light">
+                        <div class="card-body">
+                            <h6 class="card-title text-dark">{{ course.name }}</h6>
+                            <p class="card-text small text-muted mb-0">{{ course.code }}</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% empty %}
+            <div class="col-12 text-center py-4 text-muted">
+                لا يوجد مقررات مسجلة
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

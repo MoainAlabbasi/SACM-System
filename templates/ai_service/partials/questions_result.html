@@ -1,0 +1,99 @@
+{% load static %}
+{# قالب جزئي - يُرجع عبر HTMX بعد توليد الأسئلة #}
+
+<!-- عداد مخفي لتحديث الطلبات المتبقية -->
+<span data-remaining="{{ remaining }}" class="d-none"></span>
+
+<!-- رسالة النجاح -->
+<div class="alert alert-success d-flex align-items-center mb-4">
+    <i class="bi bi-check-circle-fill me-2"></i>
+    <div>
+        <strong>تم توليد {{ ai_questions.questions_count }} سؤال بنجاح!</strong>
+        <span class="ms-2 text-muted">
+            ({{ ai_questions.processing_time|floatformat:1 }} ثانية)
+        </span>
+    </div>
+</div>
+
+<!-- أزرار التحكم -->
+<div class="d-flex gap-2 mb-4 flex-wrap">
+    <a href="{% url 'ai_service:view_questions' ai_questions.id %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-play-circle me-1"></i>
+        بدء الاختبار
+    </a>
+    <a href="{% url 'ai_service:view_questions' ai_questions.id %}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-eye me-1"></i>
+        عرض الأسئلة
+    </a>
+</div>
+
+<!-- معاينة الأسئلة -->
+<div class="questions-preview">
+    {% for question in ai_questions.questions_json %}
+    <div class="card mb-3 {% if forloop.counter > 3 %}d-none more-questions{% endif %}">
+        <div class="card-body">
+            <div class="d-flex align-items-start">
+                <span class="badge bg-primary rounded-pill me-3">{{ forloop.counter }}</span>
+                <div class="flex-grow-1">
+                    <p class="mb-3 fw-medium">{{ question.question }}</p>
+                    
+                    <div class="row g-2">
+                        {% for option in question.options %}
+                        <div class="col-md-6">
+                            <div class="p-2 border rounded {% if option == question.correct_answer %}border-success bg-success bg-opacity-10{% endif %}">
+                                {% if option == question.correct_answer %}
+                                <i class="bi bi-check-circle-fill text-success me-1"></i>
+                                {% else %}
+                                <i class="bi bi-circle text-muted me-1"></i>
+                                {% endif %}
+                                {{ option }}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    {% if question.explanation %}
+                    <div class="mt-2 text-muted small">
+                        <i class="bi bi-lightbulb me-1"></i>
+                        {{ question.explanation }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    
+    {% if ai_questions.questions_count > 3 %}
+    <button type="button" class="btn btn-outline-secondary w-100" onclick="showMoreQuestions(this)">
+        <i class="bi bi-chevron-down me-1"></i>
+        عرض المزيد ({{ ai_questions.questions_count|add:"-3" }} سؤال)
+    </button>
+    {% endif %}
+</div>
+
+<!-- معلومات إضافية -->
+<div class="mt-4 pt-3 border-top">
+    <div class="row text-muted small">
+        <div class="col-auto">
+            <i class="bi bi-calendar me-1"></i>
+            {{ ai_questions.generated_at|date:"d/m/Y H:i" }}
+        </div>
+        <div class="col-auto">
+            <span class="badge bg-{% if ai_questions.difficulty == 'easy' %}success{% elif ai_questions.difficulty == 'medium' %}warning{% else %}danger{% endif %}">
+                {% if ai_questions.difficulty == 'easy' %}سهل
+                {% elif ai_questions.difficulty == 'medium' %}متوسط
+                {% else %}صعب{% endif %}
+            </span>
+        </div>
+    </div>
+</div>
+
+<script>
+function showMoreQuestions(btn) {
+    document.querySelectorAll('.more-questions').forEach(el => {
+        el.classList.remove('d-none');
+    });
+    btn.remove();
+}
+</script>

@@ -1,0 +1,76 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}الفصول الدراسية{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'core:admin_dashboard' %}" class="nav-link">
+    <i class="bi bi-speedometer2"></i>الرئيسية
+</a>
+<a href="{% url 'core:admin_users' %}" class="nav-link">
+    <i class="bi bi-people"></i>المستخدمين
+</a>
+<a href="{% url 'core:admin_courses' %}" class="nav-link">
+    <i class="bi bi-book"></i>المقررات
+</a>
+<a href="{% url 'core:admin_semesters' %}" class="nav-link active">
+    <i class="bi bi-calendar3"></i>الفصول الدراسية
+</a>
+<a href="{% url 'core:admin_majors' %}" class="nav-link">
+    <i class="bi bi-diagram-3"></i>التخصصات
+</a>
+<a href="{% url 'core:admin_levels' %}" class="nav-link">
+    <i class="bi bi-layers"></i>المستويات
+</a>
+{% endblock %}
+
+{% block page_title %}الفصول الدراسية{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">الفصول الدراسية</li>
+{% endblock %}
+
+{% block page_content %}
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>الفصل</th>
+                        <th>العام الدراسي</th>
+                        <th>تاريخ البداية</th>
+                        <th>تاريخ النهاية</th>
+                        <th>الحالة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for semester in semesters %}
+                    <tr>
+                        <td><strong>{{ semester.name }}</strong></td>
+                        <td>{{ semester.academic_year }}</td>
+                        <td>{{ semester.start_date|date:"Y/m/d" }}</td>
+                        <td>{{ semester.end_date|date:"Y/m/d" }}</td>
+                        <td>
+                            {% if semester.is_current %}
+                            <span class="badge bg-success">الفصل الحالي</span>
+                            {% else %}
+                            <span class="badge bg-secondary">منتهي</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5">
+                            <div class="empty-state">
+                                <i class="bi bi-calendar3"></i>
+                                <p>لا يوجد فصول دراسية</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

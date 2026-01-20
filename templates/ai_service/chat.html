@@ -1,0 +1,259 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}المساعد الذكي{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'core:student_dashboard' %}" class="nav-link">
+    <i class="bi bi-speedometer2"></i>الرئيسية
+</a>
+<a href="{% url 'core:student_courses' %}" class="nav-link">
+    <i class="bi bi-book"></i>مقرراتي
+</a>
+<a href="{% url 'core:student_notifications' %}" class="nav-link">
+    <i class="bi bi-bell"></i>الإشعارات
+</a>
+<a href="{% url 'ai_service:my_summaries' %}" class="nav-link">
+    <i class="bi bi-file-text"></i>الملخصات
+</a>
+<a href="{% url 'ai_service:my_questions' %}" class="nav-link">
+    <i class="bi bi-question-circle"></i>الاختبارات
+</a>
+<a href="{% url 'ai_service:chat' %}" class="nav-link active">
+    <i class="bi bi-robot"></i>المساعد الذكي
+</a>
+{% endblock %}
+
+{% block page_title %}المساعد الذكي{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">المساعد الذكي</li>
+{% endblock %}
+
+{% block page_content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card" style="height: 600px;">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-robot me-2"></i>المساعد الذكي</span>
+                <span class="badge bg-secondary">الطلبات المتبقية: <span id="remaining">{{ remaining_requests }}</span></span>
+            </div>
+            <div class="card-body d-flex flex-column p-0">
+                <!-- منطقة الرسائل -->
+                <div id="chatMessages" class="flex-grow-1 overflow-auto p-3">
+                    <!-- رسالة ترحيب -->
+                    <div class="d-flex mb-3">
+                        <div class="rounded-circle bg-primary bg-opacity-10 p-2 me-2 flex-shrink-0">
+                            <i class="bi bi-robot text-primary"></i>
+                        </div>
+                        <div class="bg-light rounded p-3" style="max-width: 80%;">
+                            <p class="mb-0">مرحباً بك! أنا المساعد الذكي لنظام S-ACM. يمكنني مساعدتك في:</p>
+                            <ul class="mb-0 mt-2">
+                                <li>الإجابة على أسئلتك حول المواد الدراسية</li>
+                                <li>شرح المفاهيم الصعبة</li>
+                                <li>تقديم نصائح للدراسة</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- المحادثات السابقة -->
+                    {% for chat in chat_history reversed %}
+                    <div class="d-flex justify-content-end mb-3">
+                        <div class="bg-primary text-white rounded p-3" style="max-width: 80%;">
+                            {{ chat.question }}
+                        </div>
+                    </div>
+                    <div class="d-flex mb-3">
+                        <div class="rounded-circle bg-primary bg-opacity-10 p-2 me-2 flex-shrink-0">
+                            <i class="bi bi-robot text-primary"></i>
+                        </div>
+                        <div class="bg-light rounded p-3" style="max-width: 80%;">
+                            {{ chat.answer|linebreaks }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- منطقة الإدخال -->
+                <div class="border-top p-3">
+                    <form id="chatForm" class="d-flex gap-2">
+                        {% csrf_token %}
+                        <input type="text" 
+                               id="questionInput" 
+                               name="question" 
+                               class="form-control" 
+                               placeholder="اكتب سؤالك هنا..."
+                               {% if not can_use %}disabled{% endif %}
+                               autocomplete="off">
+                        <button type="submit" 
+                                class="btn btn-primary" 
+                                id="sendBtn"
+                                {% if not can_use %}disabled{% endif %}>
+                            <i class="bi bi-send"></i>
+                        </button>
+                    </form>
+                    {% if not can_use %}
+                    <small class="text-danger mt-2 d-block">
+                        <i class="bi bi-exclamation-circle me-1"></i>
+                        لقد تجاوزت الحد المسموح من الطلبات. يرجى المحاولة لاحقاً.
+                    </small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-lightbulb me-2"></i>نصائح
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        اطرح أسئلة واضحة ومحددة
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        حدد المقرر أو الموضوع
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        استخدم اللغة العربية أو الإنجليزية
+                    </li>
+                    <li>
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        راجع الملخصات للحصول على معلومات أدق
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <i class="bi bi-clock-history me-2"></i>أمثلة على الأسئلة
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    <button class="list-group-item list-group-item-action example-question">
+                        ما هي أهم النقاط في هذا الموضوع؟
+                    </button>
+                    <button class="list-group-item list-group-item-action example-question">
+                        اشرح لي مفهوم...
+                    </button>
+                    <button class="list-group-item list-group-item-action example-question">
+                        كيف أستعد للاختبار؟
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const chatMessages = document.getElementById('chatMessages');
+const chatForm = document.getElementById('chatForm');
+const questionInput = document.getElementById('questionInput');
+const sendBtn = document.getElementById('sendBtn');
+const remainingEl = document.getElementById('remaining');
+
+// التمرير للأسفل
+function scrollToBottom() {
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+scrollToBottom();
+
+// إضافة رسالة
+function addMessage(content, isUser = false) {
+    const div = document.createElement('div');
+    div.className = `d-flex ${isUser ? 'justify-content-end' : ''} mb-3`;
+    
+    if (isUser) {
+        div.innerHTML = `
+            <div class="bg-primary text-white rounded p-3" style="max-width: 80%;">
+                ${content}
+            </div>
+        `;
+    } else {
+        div.innerHTML = `
+            <div class="rounded-circle bg-primary bg-opacity-10 p-2 me-2 flex-shrink-0">
+                <i class="bi bi-robot text-primary"></i>
+            </div>
+            <div class="bg-light rounded p-3" style="max-width: 80%;">
+                ${content}
+            </div>
+        `;
+    }
+    
+    chatMessages.appendChild(div);
+    scrollToBottom();
+}
+
+// إرسال الرسالة
+chatForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const question = questionInput.value.trim();
+    if (!question) return;
+    
+    // إضافة رسالة المستخدم
+    addMessage(question, true);
+    questionInput.value = '';
+    sendBtn.disabled = true;
+    
+    // إضافة مؤشر التحميل
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'd-flex mb-3';
+    loadingDiv.id = 'loadingIndicator';
+    loadingDiv.innerHTML = `
+        <div class="rounded-circle bg-primary bg-opacity-10 p-2 me-2 flex-shrink-0">
+            <i class="bi bi-robot text-primary"></i>
+        </div>
+        <div class="bg-light rounded p-3">
+            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                <span class="visually-hidden">جاري التحميل...</span>
+            </div>
+        </div>
+    `;
+    chatMessages.appendChild(loadingDiv);
+    scrollToBottom();
+    
+    try {
+        const formData = new FormData();
+        formData.append('question', question);
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+        
+        const response = await fetch('{% url "ai_service:chat_send" %}', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        // إزالة مؤشر التحميل
+        document.getElementById('loadingIndicator')?.remove();
+        
+        if (response.ok) {
+            addMessage(data.answer.replace(/\n/g, '<br>'));
+            remainingEl.textContent = data.remaining;
+        } else {
+            addMessage(`<span class="text-danger">${data.error}</span>`);
+        }
+    } catch (error) {
+        document.getElementById('loadingIndicator')?.remove();
+        addMessage('<span class="text-danger">حدث خطأ. يرجى المحاولة مرة أخرى.</span>');
+    }
+    
+    sendBtn.disabled = false;
+    questionInput.focus();
+});
+
+// أمثلة الأسئلة
+document.querySelectorAll('.example-question').forEach(btn => {
+    btn.addEventListener('click', function() {
+        questionInput.value = this.textContent.trim();
+        questionInput.focus();
+    });
+});
+</script>
+{% endblock %}

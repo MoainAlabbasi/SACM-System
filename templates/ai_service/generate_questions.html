@@ -1,0 +1,267 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}توليد أسئلة - {{ file.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* مؤشر التحميل HTMX */
+    .htmx-indicator {
+        display: none;
+    }
+    .htmx-request .htmx-indicator {
+        display: inline-flex;
+    }
+    .htmx-request .btn-generate {
+        display: none;
+    }
+    
+    /* تأثير Spinner */
+    .loading-spinner {
+        width: 1.25rem;
+        height: 1.25rem;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-radius: 50%;
+        border-top-color: #fff;
+        animation: spin 1s ease-in-out infinite;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    /* منطقة النتيجة */
+    #result-area {
+        min-height: 200px;
+        transition: all 0.3s ease;
+    }
+    
+    /* بطاقة الإعدادات */
+    .settings-card {
+        position: sticky;
+        top: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'core:student_dashboard' %}" class="nav-link">
+    <i class="bi bi-speedometer2"></i>الرئيسية
+</a>
+<a href="{% url 'core:student_courses' %}" class="nav-link">
+    <i class="bi bi-book"></i>مقرراتي
+</a>
+<a href="{% url 'core:student_notifications' %}" class="nav-link">
+    <i class="bi bi-bell"></i>الإشعارات
+</a>
+<a href="{% url 'ai_service:my_summaries' %}" class="nav-link">
+    <i class="bi bi-file-text"></i>الملخصات
+</a>
+<a href="{% url 'ai_service:my_questions' %}" class="nav-link active">
+    <i class="bi bi-question-circle"></i>الاختبارات
+</a>
+<a href="{% url 'ai_service:chat' %}" class="nav-link">
+    <i class="bi bi-chat-dots"></i>المساعد الذكي
+</a>
+{% endblock %}
+
+{% block page_title %}توليد أسئلة AI{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'core:view_file' file.id %}">{{ file.title|truncatechars:25 }}</a></li>
+<li class="breadcrumb-item active">توليد أسئلة</li>
+{% endblock %}
+
+{% block page_content %}
+<div class="row">
+    <!-- نموذج التوليد -->
+    <div class="col-lg-4 mb-4">
+        <div class="card shadow-sm settings-card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-gear me-2"></i>
+                    إعدادات الأسئلة
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- معلومات الملف -->
+                <div class="d-flex align-items-center mb-4 p-3 bg-light rounded">
+                    <div class="rounded-circle bg-success bg-opacity-10 p-2 me-3">
+                        <i class="bi bi-file-earmark text-success"></i>
+                    </div>
+                    <div class="flex-grow-1 overflow-hidden">
+                        <h6 class="mb-0 text-truncate">{{ file.title }}</h6>
+                        <small class="text-muted">{{ file.course.name }}</small>
+                    </div>
+                </div>
+                
+                <!-- حالة API -->
+                <div class="mb-3 d-flex justify-content-between align-items-center">
+                    <span class="text-muted">حالة الخدمة:</span>
+                    <span hx-get="{% url 'ai_service:api_status' %}" hx-trigger="load" hx-swap="innerHTML">
+                        <span class="badge bg-secondary">
+                            <i class="bi bi-hourglass-split"></i>
+                        </span>
+                    </span>
+                </div>
+                
+                <!-- معلومات الحد -->
+                <div class="alert {% if can_use %}alert-info{% else %}alert-warning{% endif %} py-2 mb-4">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-{% if can_use %}info-circle{% else %}exclamation-triangle{% endif %} me-2"></i>
+                        <div>
+                            <small>الطلبات المتبقية:</small>
+                            <strong id="remaining-count">{{ remaining_requests }}</strong> / 10
+                        </div>
+                    </div>
+                </div>
+                
+                {% if can_use %}
+                <!-- نموذج HTMX -->
+                <form hx-post="{% url 'ai_service:questions_generate' file.id %}"
+                      hx-target="#result-area"
+                      hx-swap="innerHTML"
+                      hx-indicator="#loading-indicator">
+                    {% csrf_token %}
+                    
+                    <!-- مستوى الصعوبة -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">مستوى الصعوبة</label>
+                        
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="difficulty" 
+                                   id="diff_easy" value="easy">
+                            <label class="form-check-label" for="diff_easy">
+                                <span class="badge bg-success me-1">سهل</span>
+                                <small class="text-muted">أسئلة مباشرة</small>
+                            </label>
+                        </div>
+                        
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="difficulty" 
+                                   id="diff_medium" value="medium" checked>
+                            <label class="form-check-label" for="diff_medium">
+                                <span class="badge bg-warning text-dark me-1">متوسط</span>
+                                <small class="text-muted">فهم وتطبيق</small>
+                            </label>
+                        </div>
+                        
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="difficulty" 
+                                   id="diff_hard" value="hard">
+                            <label class="form-check-label" for="diff_hard">
+                                <span class="badge bg-danger me-1">صعب</span>
+                                <small class="text-muted">تحليل وتقييم</small>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- عدد الأسئلة -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">عدد الأسئلة</label>
+                        <select name="questions_count" class="form-select">
+                            <option value="3">3 أسئلة</option>
+                            <option value="5" selected>5 أسئلة</option>
+                            <option value="10">10 أسئلة</option>
+                            <option value="15">15 سؤال</option>
+                        </select>
+                    </div>
+                    
+                    <!-- زر التوليد -->
+                    <button type="submit" class="btn btn-success w-100 btn-generate">
+                        <i class="bi bi-lightning me-2"></i>
+                        توليد الأسئلة
+                    </button>
+                    
+                    <!-- مؤشر التحميل HTMX -->
+                    <div id="loading-indicator" class="htmx-indicator w-100">
+                        <button type="button" class="btn btn-success w-100 d-flex align-items-center justify-content-center" disabled>
+                            <div class="loading-spinner me-2"></div>
+                            جاري التوليد...
+                        </button>
+                    </div>
+                </form>
+                {% else %}
+                <div class="alert alert-warning mb-0">
+                    <i class="bi bi-clock-history me-2"></i>
+                    استنفدت الحد المسموح. انتظر ساعة.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- الأسئلة السابقة -->
+        {% if existing_questions %}
+        <div class="card shadow-sm mt-4">
+            <div class="card-header py-2">
+                <h6 class="mb-0">
+                    <i class="bi bi-clock-history me-2"></i>
+                    أسئلة سابقة
+                </h6>
+            </div>
+            <div class="list-group list-group-flush" style="max-height: 200px; overflow-y: auto;">
+                {% for q in existing_questions %}
+                <a href="{% url 'ai_service:view_questions' q.id %}" 
+                   class="list-group-item list-group-item-action py-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="badge bg-{% if q.difficulty == 'easy' %}success{% elif q.difficulty == 'medium' %}warning{% else %}danger{% endif %} me-1">
+                                {% if q.difficulty == 'easy' %}سهل{% elif q.difficulty == 'medium' %}متوسط{% else %}صعب{% endif %}
+                            </span>
+                            <small>{{ q.questions_count }} سؤال</small>
+                        </div>
+                        <small class="text-muted">{{ q.generated_at|date:"d/m H:i" }}</small>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- منطقة النتيجة -->
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-question-circle me-2"></i>
+                    الأسئلة
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- منطقة النتيجة - يتم تحديثها عبر HTMX -->
+                <div id="result-area">
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-patch-question display-4 mb-3 d-block opacity-50"></i>
+                        <p class="mb-1">اختر الإعدادات واضغط "توليد الأسئلة"</p>
+                        <small>سيتم عرض الأسئلة هنا</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- HTMX Library -->
+<script src="https://unpkg.com/htmx.org@1.9.10"></script>
+<script>
+    // تحديث عداد الطلبات المتبقية بعد كل طلب ناجح
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+        if (evt.detail.target.id === 'result-area') {
+            const newRemaining = evt.detail.target.querySelector('[data-remaining]');
+            if (newRemaining) {
+                document.getElementById('remaining-count').textContent = newRemaining.dataset.remaining;
+            }
+        }
+    });
+    
+    // التمرير للنتيجة بعد التحميل
+    document.body.addEventListener('htmx:afterSettle', function(evt) {
+        if (evt.detail.target.id === 'result-area') {
+            evt.detail.target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    });
+</script>
+{% endblock %}

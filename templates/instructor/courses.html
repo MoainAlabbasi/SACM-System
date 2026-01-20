@@ -1,0 +1,67 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}مقرراتي{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'core:instructor_dashboard' %}" class="nav-link">
+    <i class="bi bi-speedometer2"></i>الرئيسية
+</a>
+<a href="{% url 'core:instructor_courses' %}" class="nav-link active">
+    <i class="bi bi-book"></i>مقرراتي
+</a>
+{% endblock %}
+
+{% block page_title %}مقرراتي{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">مقرراتي</li>
+{% endblock %}
+
+{% block page_content %}
+<div class="row g-4">
+    {% for course in courses %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">{{ course.name }}</h5>
+                <p class="text-muted mb-2">
+                    <code>{{ course.code }}</code>
+                </p>
+                <p class="card-text small text-muted">
+                    {{ course.description|default:"لا يوجد وصف"|truncatewords:15 }}
+                </p>
+                
+                <div class="d-flex gap-2 mb-3">
+                    <span class="badge bg-primary">{{ course.level.name }}</span>
+                    <span class="badge bg-secondary">{{ course.semester.name }}</span>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-top-0">
+                <div class="d-flex gap-2">
+                    <a href="{% url 'core:instructor_course_files' course.id %}" class="btn btn-primary btn-sm flex-grow-1">
+                        <i class="bi bi-folder me-1"></i>الملفات
+                    </a>
+                    <a href="{% url 'core:instructor_upload_file' course.id %}" class="btn btn-success btn-sm">
+                        <i class="bi bi-upload"></i>
+                    </a>
+                    <a href="{% url 'core:instructor_send_notification' course.id %}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-bell"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <div class="empty-state">
+                    <i class="bi bi-book"></i>
+                    <p>لا يوجد مقررات مسندة إليك</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,113 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}ملفات {{ course.name }}{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'core:instructor_dashboard' %}" class="nav-link">
+    <i class="bi bi-speedometer2"></i>الرئيسية
+</a>
+<a href="{% url 'core:instructor_courses' %}" class="nav-link active">
+    <i class="bi bi-book"></i>مقرراتي
+</a>
+{% endblock %}
+
+{% block page_title %}{{ course.name }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'core:instructor_courses' %}">مقرراتي</a></li>
+<li class="breadcrumb-item active">{{ course.name }}</li>
+{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'core:instructor_upload_file' course.id %}" class="btn btn-primary">
+    <i class="bi bi-upload me-1"></i>رفع ملف
+</a>
+{% endblock %}
+
+{% block page_content %}
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h5 class="mb-1">{{ course.name }}</h5>
+                <p class="text-muted mb-0">{{ course.description|default:"لا يوجد وصف" }}</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <span class="badge bg-primary">{{ course.level.name }}</span>
+                <span class="badge bg-secondary">{{ course.semester.name }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-folder me-2"></i>الملفات ({{ files.count }})
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>الملف</th>
+                        <th>النوع</th>
+                        <th>الحجم</th>
+                        <th>المشاهدات</th>
+                        <th>التحميلات</th>
+                        <th>الحالة</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for file in files %}
+                    <tr>
+                        <td>
+                            <strong>{{ file.title }}</strong>
+                            <br><small class="text-muted">{{ file.upload_date|date:"Y/m/d H:i" }}</small>
+                        </td>
+                        <td>
+                            <span class="badge bg-info">{{ file.get_file_type_display }}</span>
+                        </td>
+                        <td>{{ file.file_size|filesizeformat }}</td>
+                        <td>{{ file.view_count }}</td>
+                        <td>{{ file.download_count }}</td>
+                        <td>
+                            {% if file.is_visible %}
+                            <span class="badge bg-success">مرئي</span>
+                            {% else %}
+                            <span class="badge bg-secondary">مخفي</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'core:view_file' file.id %}" class="btn btn-outline-primary" title="عرض">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'core:instructor_edit_file' file.id %}" class="btn btn-outline-secondary" title="تعديل">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="{% url 'core:instructor_delete_file' file.id %}" class="btn btn-outline-danger" title="حذف" onclick="return confirm('هل أنت متأكد؟');">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5">
+                            <div class="empty-state">
+                                <i class="bi bi-folder"></i>
+                                <p>لا يوجد ملفات في هذا المقرر</p>
+                                <a href="{% url 'core:instructor_upload_file' course.id %}" class="btn btn-primary">
+                                    <i class="bi bi-upload me-1"></i>رفع ملف
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}ملخصاتي{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'core:student_dashboard' %}" class="nav-link">
+    <i class="bi bi-speedometer2"></i>الرئيسية
+</a>
+<a href="{% url 'core:student_courses' %}" class="nav-link">
+    <i class="bi bi-book"></i>مقرراتي
+</a>
+<a href="{% url 'core:student_notifications' %}" class="nav-link">
+    <i class="bi bi-bell"></i>الإشعارات
+</a>
+<a href="{% url 'ai_service:my_summaries' %}" class="nav-link active">
+    <i class="bi bi-file-text"></i>الملخصات
+</a>
+<a href="{% url 'ai_service:my_questions' %}" class="nav-link">
+    <i class="bi bi-question-circle"></i>الاختبارات
+</a>
+{% endblock %}
+
+{% block page_title %}ملخصاتي{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">الملخصات</li>
+{% endblock %}
+
+{% block page_content %}
+<div class="row g-4">
+    {% for summary in summaries %}
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="badge bg-primary">{{ summary.file.course.name }}</span>
+                <small class="text-muted">{{ summary.generated_at|date:"Y/m/d" }}</small>
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">{{ summary.file.title }}</h5>
+                <p class="card-text text-muted">
+                    {{ summary.summary_text|truncatewords:30 }}
+                </p>
+                <div class="d-flex gap-2">
+                    <span class="badge bg-secondary">{{ summary.get_summary_type_display }}</span>
+                    <span class="badge bg-info">{{ summary.word_count }} كلمة</span>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent">
+                <div class="d-flex gap-2">
+                    <a href="{% url 'ai_service:view_summary' summary.id %}" class="btn btn-primary btn-sm flex-grow-1">
+                        <i class="bi bi-eye me-1"></i>عرض
+                    </a>
+                    <a href="{% url 'ai_service:export_summary' summary.id 'md' %}" class="btn btn-outline-success btn-sm">
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <div class="empty-state">
+                    <i class="bi bi-file-text"></i>
+                    <p>لا يوجد ملخصات</p>
+                    <p class="text-muted small">يمكنك إنشاء ملخص من أي ملف عبر زر "تلخيص AI"</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,103 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}إنشاء اختبار - {{ file.title }}{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'core:student_dashboard' %}" class="nav-link">
+    <i class="bi bi-speedometer2"></i>الرئيسية
+</a>
+<a href="{% url 'core:student_courses' %}" class="nav-link">
+    <i class="bi bi-book"></i>مقرراتي
+</a>
+<a href="{% url 'core:student_notifications' %}" class="nav-link">
+    <i class="bi bi-bell"></i>الإشعارات
+</a>
+<a href="{% url 'core:student_summaries' %}" class="nav-link">
+    <i class="bi bi-file-text"></i>الملخصات
+</a>
+<a href="{% url 'core:student_quizzes' %}" class="nav-link active">
+    <i class="bi bi-question-circle"></i>الاختبارات
+</a>
+{% endblock %}
+
+{% block page_title %}إنشاء اختبار{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'core:student_quizzes' %}">الاختبارات</a></li>
+<li class="breadcrumb-item active">اختبار جديد</li>
+{% endblock %}
+
+{% block page_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="rounded-circle bg-warning bg-opacity-10 p-3 me-3">
+                        <i class="bi bi-file-earmark text-warning fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-1">{{ file.title }}</h5>
+                        <p class="text-muted mb-0">{{ file.course.name }} • {{ file.get_file_type_display }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% if existing_quiz %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            يوجد اختبار سابق لهذا الملف.
+            <a href="{% url 'ai_service:take_quiz' existing_quiz.id %}" class="alert-link">بدء الاختبار</a>
+        </div>
+        {% endif %}
+        
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <div class="rounded-circle bg-warning bg-opacity-10 d-inline-flex p-4 mb-4">
+                    <i class="bi bi-question-circle text-warning" style="font-size: 3rem;"></i>
+                </div>
+                
+                <h4 class="mb-3">إنشاء اختبار بالذكاء الاصطناعي</h4>
+                <p class="text-muted mb-4">
+                    سيتم تحليل محتوى الملف وتوليد أسئلة اختيار من متعدد تلقائياً.
+                </p>
+                
+                <form method="post" id="quizForm">
+                    {% csrf_token %}
+                    
+                    <div class="row justify-content-center mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">عدد الأسئلة</label>
+                            <select name="num_questions" class="form-select">
+                                <option value="5">5 أسئلة</option>
+                                <option value="10" selected>10 أسئلة</option>
+                                <option value="15">15 سؤال</option>
+                                <option value="20">20 سؤال</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-warning btn-lg" id="generateBtn">
+                        <i class="bi bi-magic me-2"></i>إنشاء الاختبار
+                    </button>
+                </form>
+                
+                <div id="loadingState" class="d-none mt-4">
+                    <div class="spinner-border text-warning mb-3" role="status">
+                        <span class="visually-hidden">جاري التحميل...</span>
+                    </div>
+                    <p class="text-muted">جاري إنشاء الأسئلة... قد يستغرق هذا بضع ثوانٍ</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('quizForm')?.addEventListener('submit', function() {
+    document.getElementById('generateBtn').classList.add('d-none');
+    document.getElementById('loadingState').classList.remove('d-none');
+});
+</script>
+{% endblock %}

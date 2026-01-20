@@ -1,0 +1,91 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}المستويات{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'core:admin_dashboard' %}" class="nav-link">
+    <i class="bi bi-speedometer2"></i>الرئيسية
+</a>
+<a href="{% url 'core:admin_users' %}" class="nav-link">
+    <i class="bi bi-people"></i>المستخدمين
+</a>
+<a href="{% url 'core:admin_courses' %}" class="nav-link">
+    <i class="bi bi-book"></i>المقررات
+</a>
+<a href="{% url 'core:admin_semesters' %}" class="nav-link">
+    <i class="bi bi-calendar3"></i>الفصول الدراسية
+</a>
+<a href="{% url 'core:admin_majors' %}" class="nav-link">
+    <i class="bi bi-diagram-3"></i>التخصصات
+</a>
+<a href="{% url 'core:admin_levels' %}" class="nav-link active">
+    <i class="bi bi-layers"></i>المستويات
+</a>
+{% endblock %}
+
+{% block page_title %}المستويات الدراسية{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">المستويات</li>
+{% endblock %}
+
+{% block page_content %}
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-plus-lg me-2"></i>إضافة مستوى
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">اسم المستوى</label>
+                        <input type="text" name="name" class="form-control" placeholder="المستوى الأول" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">رقم المستوى</label>
+                        <input type="number" name="level_number" class="form-control" min="1" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-check-lg me-1"></i>إضافة
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>المستوى</th>
+                                <th>الرقم</th>
+                                <th>عدد الطلاب</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for level in levels %}
+                            <tr>
+                                <td><strong>{{ level.name }}</strong></td>
+                                <td>{{ level.level_number }}</td>
+                                <td>
+                                    <span class="badge bg-primary">{{ level.students_count }}</span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center py-4 text-muted">لا يوجد مستويات</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

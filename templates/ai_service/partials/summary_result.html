@@ -1,0 +1,81 @@
+{% load static %}
+{# قالب جزئي - يُرجع عبر HTMX بعد توليد الملخص #}
+
+<!-- عداد مخفي لتحديث الطلبات المتبقية -->
+<span data-remaining="{{ remaining }}" class="d-none"></span>
+
+<!-- رسالة النجاح -->
+<div class="alert alert-success d-flex align-items-center mb-4">
+    <i class="bi bi-check-circle-fill me-2"></i>
+    <div>
+        <strong>تم توليد الملخص بنجاح!</strong>
+        <span class="ms-2 text-muted">
+            ({{ summary.word_count }} كلمة • {{ summary.processing_time|floatformat:1 }} ثانية)
+        </span>
+    </div>
+</div>
+
+<!-- أزرار التحكم -->
+<div class="d-flex gap-2 mb-4 flex-wrap">
+    <a href="{% url 'ai_service:view_summary' summary.id %}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-eye me-1"></i>
+        عرض منفصل
+    </a>
+    <a href="{% url 'ai_service:export_summary' summary.id 'md' %}" class="btn btn-outline-success btn-sm">
+        <i class="bi bi-download me-1"></i>
+        تحميل Markdown
+    </a>
+    <a href="{% url 'ai_service:export_summary' summary.id 'txt' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-file-text me-1"></i>
+        تحميل TXT
+    </a>
+    <button type="button" class="btn btn-outline-info btn-sm" onclick="copyToClipboard()">
+        <i class="bi bi-clipboard me-1"></i>
+        نسخ
+    </button>
+</div>
+
+<!-- محتوى الملخص -->
+<div class="markdown-content border rounded p-4 bg-light" id="summary-content">
+    {{ summary.summary_text|linebreaks }}
+</div>
+
+<!-- معلومات إضافية -->
+<div class="mt-4 pt-3 border-top">
+    <div class="row text-muted small">
+        <div class="col-auto">
+            <i class="bi bi-calendar me-1"></i>
+            {{ summary.generated_at|date:"d/m/Y H:i" }}
+        </div>
+        <div class="col-auto">
+            <i class="bi bi-file-earmark me-1"></i>
+            {{ summary.file.title|truncatechars:30 }}
+        </div>
+        <div class="col-auto">
+            <span class="badge bg-{% if summary.summary_type == 'brief' %}primary{% elif summary.summary_type == 'detailed' %}success{% else %}info{% endif %}">
+                {% if summary.summary_type == 'brief' %}ملخص موجز
+                {% elif summary.summary_type == 'detailed' %}ملخص تفصيلي
+                {% else %}النقاط الرئيسية{% endif %}
+            </span>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyToClipboard() {
+    const content = document.getElementById('summary-content').innerText;
+    navigator.clipboard.writeText(content).then(function() {
+        // إظهار رسالة نجاح مؤقتة
+        const btn = event.target.closest('button');
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check me-1"></i>تم النسخ!';
+        btn.classList.remove('btn-outline-info');
+        btn.classList.add('btn-success');
+        setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-outline-info');
+        }, 2000);
+    });
+}
+</script>

@@ -1,0 +1,111 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}تلخيص - {{ file.title }}{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'core:student_dashboard' %}" class="nav-link">
+    <i class="bi bi-speedometer2"></i>الرئيسية
+</a>
+<a href="{% url 'core:student_courses' %}" class="nav-link">
+    <i class="bi bi-book"></i>مقرراتي
+</a>
+<a href="{% url 'core:student_notifications' %}" class="nav-link">
+    <i class="bi bi-bell"></i>الإشعارات
+</a>
+<a href="{% url 'core:student_summaries' %}" class="nav-link active">
+    <i class="bi bi-file-text"></i>الملخصات
+</a>
+<a href="{% url 'core:student_quizzes' %}" class="nav-link">
+    <i class="bi bi-question-circle"></i>الاختبارات
+</a>
+{% endblock %}
+
+{% block page_title %}تلخيص الملف{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'core:student_summaries' %}">الملخصات</a></li>
+<li class="breadcrumb-item active">تلخيص جديد</li>
+{% endblock %}
+
+{% block page_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="rounded-circle bg-primary bg-opacity-10 p-3 me-3">
+                        <i class="bi bi-file-earmark text-primary fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-1">{{ file.title }}</h5>
+                        <p class="text-muted mb-0">{{ file.course.name }} • {{ file.get_file_type_display }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% if existing_summary %}
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-file-text me-2"></i>الملخص الموجود</span>
+                <small class="text-muted">{{ existing_summary.created_at|date:"Y/m/d H:i" }}</small>
+            </div>
+            <div class="card-body">
+                <div class="summary-content">
+                    {{ existing_summary.summary_text|linebreaks }}
+                </div>
+                
+                {% if existing_summary.key_points %}
+                <hr>
+                <h6><i class="bi bi-list-check me-2"></i>النقاط الرئيسية:</h6>
+                <ul>
+                    {% for point in existing_summary.key_points %}
+                    <li>{{ point }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+            <div class="card-footer">
+                <a href="{% url 'ai_service:download_summary' existing_summary.id %}" class="btn btn-success">
+                    <i class="bi bi-download me-1"></i>تحميل كـ Markdown
+                </a>
+            </div>
+        </div>
+        {% else %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <div class="rounded-circle bg-info bg-opacity-10 d-inline-flex p-4 mb-4">
+                    <i class="bi bi-robot text-info" style="font-size: 3rem;"></i>
+                </div>
+                
+                <h4 class="mb-3">تلخيص الملف بالذكاء الاصطناعي</h4>
+                <p class="text-muted mb-4">
+                    سيتم استخراج النص من الملف وتلخيصه تلقائياً مع استخراج النقاط الرئيسية.
+                </p>
+                
+                <form method="post" id="summarizeForm">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary btn-lg" id="summarizeBtn">
+                        <i class="bi bi-magic me-2"></i>بدء التلخيص
+                    </button>
+                </form>
+                
+                <div id="loadingState" class="d-none mt-4">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">جاري التحميل...</span>
+                    </div>
+                    <p class="text-muted">جاري تلخيص الملف... قد يستغرق هذا بضع ثوانٍ</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.getElementById('summarizeForm')?.addEventListener('submit', function() {
+    document.getElementById('summarizeBtn').classList.add('d-none');
+    document.getElementById('loadingState').classList.remove('d-none');
+});
+</script>
+{% endblock %}

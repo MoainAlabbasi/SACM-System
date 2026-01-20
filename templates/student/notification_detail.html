@@ -1,0 +1,79 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}{{ notification.title }}{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'core:student_dashboard' %}" class="nav-link">
+    <i class="bi bi-speedometer2"></i>الرئيسية
+</a>
+<a href="{% url 'core:student_courses' %}" class="nav-link">
+    <i class="bi bi-book"></i>مقرراتي
+</a>
+<a href="{% url 'core:student_notifications' %}" class="nav-link active">
+    <i class="bi bi-bell"></i>الإشعارات
+</a>
+<a href="{% url 'core:student_summaries' %}" class="nav-link">
+    <i class="bi bi-file-text"></i>الملخصات
+</a>
+<a href="{% url 'core:student_quizzes' %}" class="nav-link">
+    <i class="bi bi-question-circle"></i>الاختبارات
+</a>
+{% endblock %}
+
+{% block page_title %}{{ notification.title }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'core:student_notifications' %}">الإشعارات</a></li>
+<li class="breadcrumb-item active">{{ notification.title|truncatewords:5 }}</li>
+{% endblock %}
+
+{% block page_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>
+                    {% if notification.notification_type == 'file_upload' %}
+                    <i class="bi bi-file-earmark-plus text-primary me-2"></i>
+                    {% elif notification.notification_type == 'announcement' %}
+                    <i class="bi bi-megaphone text-warning me-2"></i>
+                    {% else %}
+                    <i class="bi bi-bell text-info me-2"></i>
+                    {% endif %}
+                    {{ notification.title }}
+                </span>
+                <small class="text-muted">{{ notification.created_at|date:"Y/m/d H:i" }}</small>
+            </div>
+            <div class="card-body">
+                <div class="notification-content">
+                    {{ notification.body|linebreaks }}
+                </div>
+                
+                {% if notification.course %}
+                <hr>
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-book text-muted me-2"></i>
+                    <span class="text-muted">المقرر:</span>
+                    <a href="{% url 'core:student_course_files' notification.course.id %}" class="ms-2">
+                        {{ notification.course.name }}
+                    </a>
+                </div>
+                {% endif %}
+                
+                {% if notification.sender %}
+                <div class="d-flex align-items-center mt-2">
+                    <i class="bi bi-person text-muted me-2"></i>
+                    <span class="text-muted">المرسل:</span>
+                    <span class="ms-2">{{ notification.sender.full_name }}</span>
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-footer">
+                <a href="{% url 'core:student_notifications' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-right me-1"></i>العودة للإشعارات
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

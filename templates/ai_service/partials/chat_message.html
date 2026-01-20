@@ -1,0 +1,50 @@
+{# قالب جزئي - يُرجع عبر HTMX بعد إرسال رسالة #}
+
+<!-- عداد مخفي لتحديث الطلبات المتبقية -->
+<span data-remaining="{{ remaining }}" class="d-none"></span>
+
+<!-- رسالة المستخدم -->
+<div class="chat-message user-message mb-3">
+    <div class="d-flex justify-content-end">
+        <div class="message-bubble bg-primary text-white rounded-3 p-3" style="max-width: 80%;">
+            <div class="message-content">
+                {{ chat.question }}
+            </div>
+            <div class="message-time text-end mt-1 opacity-75">
+                <small>{{ chat.created_at|date:"H:i" }}</small>
+            </div>
+        </div>
+        <div class="avatar ms-2">
+            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" 
+                 style="width: 36px; height: 36px;">
+                <i class="bi bi-person"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- رد المساعد -->
+<div class="chat-message bot-message mb-3">
+    <div class="d-flex">
+        <div class="avatar me-2">
+            <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center" 
+                 style="width: 36px; height: 36px;">
+                <i class="bi bi-robot"></i>
+            </div>
+        </div>
+        <div class="message-bubble bg-light rounded-3 p-3" style="max-width: 80%;">
+            <div class="message-content markdown-content">
+                {{ chat.answer|linebreaks }}
+            </div>
+            <div class="message-time text-end mt-1 text-muted">
+                <small>{{ chat.created_at|date:"H:i" }}</small>
+                {% if chat.file %}
+                <span class="badge bg-secondary ms-1">
+                    <i class="bi bi-file-earmark"></i>
+                    {{ chat.file.title|truncatechars:15 }}
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>

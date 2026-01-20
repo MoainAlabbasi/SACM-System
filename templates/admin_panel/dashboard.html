@@ -1,0 +1,168 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}لوحة تحكم المسؤول{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'core:admin_dashboard' %}" class="nav-link active">
+    <i class="bi bi-speedometer2"></i>الرئيسية
+</a>
+<a href="{% url 'core:admin_users' %}" class="nav-link">
+    <i class="bi bi-people"></i>المستخدمين
+</a>
+<a href="{% url 'core:admin_courses' %}" class="nav-link">
+    <i class="bi bi-book"></i>المقررات
+</a>
+<a href="{% url 'core:admin_semesters' %}" class="nav-link">
+    <i class="bi bi-calendar3"></i>الفصول الدراسية
+</a>
+<a href="{% url 'core:admin_majors' %}" class="nav-link">
+    <i class="bi bi-diagram-3"></i>التخصصات
+</a>
+<a href="{% url 'core:admin_levels' %}" class="nav-link">
+    <i class="bi bi-layers"></i>المستويات
+</a>
+<hr class="my-3">
+<a href="{% url 'core:admin_promote_students' %}" class="nav-link">
+    <i class="bi bi-arrow-up-circle"></i>ترقية الطلاب
+</a>
+{% endblock %}
+
+{% block page_title %}لوحة التحكم{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">لوحة التحكم</li>
+{% endblock %}
+
+{% block page_content %}
+<!-- Stats Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card primary">
+            <i class="bi bi-people stat-icon"></i>
+            <div class="stat-value">{{ total_users }}</div>
+            <div class="stat-label">إجمالي المستخدمين</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card secondary">
+            <i class="bi bi-mortarboard stat-icon"></i>
+            <div class="stat-value">{{ total_students }}</div>
+            <div class="stat-label">الطلاب</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card accent">
+            <i class="bi bi-person-workspace stat-icon"></i>
+            <div class="stat-value">{{ total_instructors }}</div>
+            <div class="stat-label">المدرسين</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card danger">
+            <i class="bi bi-file-earmark-text stat-icon"></i>
+            <div class="stat-value">{{ total_files }}</div>
+            <div class="stat-label">الملفات</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Recent Users -->
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-people me-2"></i>أحدث المستخدمين</span>
+                <a href="{% url 'core:admin_users' %}" class="btn btn-sm btn-outline-primary">عرض الكل</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>الاسم</th>
+                                <th>الدور</th>
+                                <th>الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in recent_users %}
+                            <tr>
+                                <td>
+                                    <strong>{{ user.full_name }}</strong>
+                                    <br><small class="text-muted">{{ user.academic_id }}</small>
+                                </td>
+                                <td>{{ user.role.get_name_display|default:"-" }}</td>
+                                <td>
+                                    <span class="badge badge-status-{{ user.account_status }}">
+                                        {{ user.get_account_status_display }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center text-muted py-4">لا يوجد مستخدمين</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Files -->
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-file-earmark me-2"></i>أحدث الملفات</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>العنوان</th>
+                                <th>المقرر</th>
+                                <th>الرافع</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for file in recent_files %}
+                            <tr>
+                                <td>
+                                    <strong>{{ file.title }}</strong>
+                                    <br><small class="text-muted">{{ file.get_file_type_display }}</small>
+                                </td>
+                                <td>{{ file.course.name }}</td>
+                                <td>{{ file.uploader.full_name }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center text-muted py-4">لا يوجد ملفات</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Current Semester Info -->
+{% if active_semester %}
+<div class="card mt-4">
+    <div class="card-body">
+        <div class="d-flex align-items-center">
+            <div class="rounded-circle bg-primary bg-opacity-10 p-3 me-3">
+                <i class="bi bi-calendar-check text-primary fs-4"></i>
+            </div>
+            <div>
+                <h6 class="mb-1">الفصل الدراسي الحالي</h6>
+                <p class="mb-0 text-muted">{{ active_semester.name }} - {{ active_semester.academic_year }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,102 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}الإشعارات{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'core:student_dashboard' %}" class="nav-link">
+    <i class="bi bi-speedometer2"></i>الرئيسية
+</a>
+<a href="{% url 'core:student_courses' %}" class="nav-link">
+    <i class="bi bi-book"></i>مقرراتي
+</a>
+<a href="{% url 'core:student_notifications' %}" class="nav-link active">
+    <i class="bi bi-bell"></i>الإشعارات
+</a>
+<a href="{% url 'core:student_summaries' %}" class="nav-link">
+    <i class="bi bi-file-text"></i>الملخصات
+</a>
+<a href="{% url 'core:student_quizzes' %}" class="nav-link">
+    <i class="bi bi-question-circle"></i>الاختبارات
+</a>
+{% endblock %}
+
+{% block page_title %}الإشعارات{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">الإشعارات</li>
+{% endblock %}
+
+{% block page_actions %}
+{% if notifications %}
+<form method="post" action="{% url 'core:mark_all_read' %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-outline-primary">
+        <i class="bi bi-check-all me-1"></i>تحديد الكل كمقروء
+    </button>
+</form>
+{% endif %}
+{% endblock %}
+
+{% block page_content %}
+<div class="card">
+    <div class="card-body p-0">
+        <div class="list-group list-group-flush">
+            {% for notification in notifications %}
+            <a href="{% url 'core:student_notification_detail' notification.id %}" 
+               class="list-group-item list-group-item-action {% if not notification.is_read %}bg-light{% endif %}">
+                <div class="d-flex w-100 justify-content-between align-items-start">
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            {% if not notification.is_read %}
+                            <span class="badge bg-primary">جديد</span>
+                            {% endif %}
+                            <h6 class="mb-0">{{ notification.title }}</h6>
+                        </div>
+                        <p class="mb-1 text-muted">{{ notification.message|truncatewords:20 }}</p>
+                        <small class="text-muted">
+                            <i class="bi bi-clock me-1"></i>{{ notification.created_at|timesince }} مضت
+                            {% if notification.course %}
+                            <span class="mx-2">•</span>
+                            <i class="bi bi-book me-1"></i>{{ notification.course.name }}
+                            {% endif %}
+                        </small>
+                    </div>
+                    <i class="bi bi-chevron-left text-muted"></i>
+                </div>
+            </a>
+            {% empty %}
+            <div class="text-center py-5">
+                <div class="empty-state">
+                    <i class="bi bi-bell"></i>
+                    <p>لا يوجد إشعارات</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% if notifications.has_other_pages %}
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if notifications.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ notifications.previous_page_number }}">السابق</a>
+        </li>
+        {% endif %}
+        
+        {% for num in notifications.paginator.page_range %}
+        <li class="page-item {% if notifications.number == num %}active{% endif %}">
+            <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+        </li>
+        {% endfor %}
+        
+        {% if notifications.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ notifications.next_page_number }}">التالي</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

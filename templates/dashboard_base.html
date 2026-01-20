@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h5 class="mb-1">{{ user.full_name }}</h5>
+            <small class="opacity-75">{{ user.role.get_name_display }}</small>
+        </div>
+        
+        <nav class="sidebar-nav">
+            {% block sidebar_nav %}{% endblock %}
+        </nav>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Page Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="mb-1">{% block page_title %}{% endblock %}</h2>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0">
+                        <li class="breadcrumb-item"><a href="{% url 'core:dashboard_redirect' %}">الرئيسية</a></li>
+                        {% block breadcrumb %}{% endblock %}
+                    </ol>
+                </nav>
+            </div>
+            <div>
+                {% block page_actions %}{% endblock %}
+            </div>
+        </div>
+        
+        <!-- Page Content -->
+        {% block page_content %}{% endblock %}
+    </main>
+</div>
+
+<!-- Mobile Sidebar Toggle -->
+<button class="btn btn-primary d-lg-none position-fixed" style="bottom: 1rem; left: 1rem; z-index: 1001;" onclick="document.getElementById('sidebar').classList.toggle('show')">
+    <i class="bi bi-list"></i>
+</button>
+{% endblock %}
