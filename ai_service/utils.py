@@ -4,7 +4,6 @@ S-ACM - نظام إدارة المحتوى الأكاديمي الذكي
 
 هذا الملف يحتوي على جميع دوال الاتصال بـ Gemini API
 يستخدم موديل gemini-1.5-flash (الأسرع والأرخص)
-يستخدم المكتبة الجديدة google-genai
 """
 
 import os
@@ -12,8 +11,7 @@ import json
 import logging
 from typing import Optional, List, Dict, Any
 
-from google import genai
-from google.genai import types
+import google.generativeai as genai
 from django.conf import settings
 
 # إعداد التسجيل
@@ -22,12 +20,9 @@ logger = logging.getLogger(__name__)
 
 # ==================== إعداد Gemini API ====================
 
-def get_gemini_client():
+def configure_gemini():
     """
-    الحصول على عميل Gemini مُهيأ
-    
-    Returns:
-        genai.Client: عميل Gemini جاهز للاستخدام
+    تهيئة Gemini API مع المفتاح
     
     Raises:
         ValueError: إذا لم يتم تعيين GEMINI_API_KEY
@@ -40,10 +35,45 @@ def get_gemini_client():
             "يرجى إضافته في ملف .env أو settings.py"
         )
     
-    # إنشاء العميل
-    client = genai.Client(api_key=api_key)
+    genai.configure(api_key=api_key)
+    return True
+
+
+def get_model(model_name: str = "gemini-1.5-flash"):
+    """
+    الحصول على نموذج Gemini
     
-    return client
+    Args:
+        model_name: اسم النموذج (افتراضي: gemini-1.5-flash)
+    
+    Returns:
+        genai.GenerativeModel: نموذج Gemini جاهز للاستخدام
+    """
+    configure_gemini()
+    
+    # إعدادات الأمان
+    safety_settings = [
+        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+    ]
+    
+    # إعدادات التوليد
+    generation_config = {
+        "temperature": 0.7,
+        "top_p": 0.95,
+        "top_k": 40,
+        "max_output_tokens": 8192,
+    }
+    
+    model = genai.GenerativeModel(
+        model_name=model_name,
+        generation_config=generation_config,
+        safety_settings=safety_settings
+    )
+    
+    return model
 
 
 # ==================== دوال التلخيص ====================
@@ -120,18 +150,8 @@ def generate_summary(text: str, summary_type: str = 'brief', language: str = 'ar
     prompt = prompts.get(summary_type, prompts['brief'])
     
     try:
-        client = get_gemini_client()
-        
-        response = client.models.generate_content(
-            model="gemini-1.5-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.7,
-                top_p=0.95,
-                top_k=40,
-                max_output_tokens=8192,
-            )
-        )
+        model = get_model("gemini-1.5-flash")
+        response = model.generate_content(prompt)
         
         if response.text:
             return response.text
@@ -208,18 +228,8 @@ def generate_questions(
 """
     
     try:
-        client = get_gemini_client()
-        
-        response = client.models.generate_content(
-            model="gemini-1.5-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.7,
-                top_p=0.95,
-                top_k=40,
-                max_output_tokens=8192,
-            )
-        )
+        model = get_model("gemini-1.5-flash")
+        response = model.generate_content(prompt)
         
         if response.text:
             # محاولة استخراج JSON من الرد
@@ -316,18 +326,8 @@ def generate_chat_response(
 """
     
     try:
-        client = get_gemini_client()
-        
-        response = client.models.generate_content(
-            model="gemini-1.5-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.7,
-                top_p=0.95,
-                top_k=40,
-                max_output_tokens=4096,
-            )
-        )
+        model = get_model("gemini-1.5-flash")
+        response = model.generate_content(prompt)
         
         if response.text:
             return response.text
@@ -349,15 +349,8 @@ def check_api_connection() -> Dict[str, Any]:
         dict: حالة الاتصال
     """
     try:
-        client = get_gemini_client()
-        
-        response = client.models.generate_content(
-            model="gemini-1.5-flash",
-            contents="قل: مرحباً",
-            config=types.GenerateContentConfig(
-                max_output_tokens=50,
-            )
-        )
+        model = get_model("gemini-1.5-flash")
+        response = model.generate_content("قل: مرحباً")
         
         return {
             'status': 'connected',

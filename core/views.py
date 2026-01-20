@@ -15,6 +15,40 @@ from accounts.models import User, Role, Major, Level
 from .models import Course, Semester, LectureFile, Notification, NotificationRecipient, InstructorCourse
 
 
+# ==================== دوال مساعدة ====================
+
+def send_file_notification(course, lecture_file, sender):
+    """
+    إرسال إشعار للطلاب عند رفع ملف جديد
+    يستخدم bulk_create لتحسين الأداء
+    """
+    notification = Notification.objects.create(
+        sender=sender,
+        title=f'ملف جديد: {lecture_file.title}',
+        body=f'تم رفع ملف جديد "{lecture_file.title}" في مقرر {course.name}',
+        notification_type='new_file',
+        course=course,
+    )
+    
+    # جلب الطلاب المستهدفين
+    students = User.objects.filter(
+        role__name='student',
+        major__in=course.majors.all(),
+        level=course.level
+    ).values_list('id', flat=True)
+    
+    # استخدام bulk_create لتحسين الأداء
+    recipients = [
+        NotificationRecipient(notification=notification, user_id=student_id)
+        for student_id in students
+    ]
+    
+    # إنشاء جميع السجلات دفعة واحدة (batch_size للتعامل مع أعداد كبيرة)
+    NotificationRecipient.objects.bulk_create(recipients, batch_size=500)
+    
+    return notification
+
+
 def home_view(request):
     """الصفحة الرئيسية"""
     if request.user.is_authenticated:
@@ -47,6 +81,9 @@ def admin_dashboard_view(request):
         messages.error(request, 'ليس لديك صلاحية الوصول لهذه الصفحة.')
         return redirect('core:dashboard_redirect')
     
+    # إحصائيات سريعة
+    from accounts.models import UserActivity
+    
     context = {
         'total_users': User.objects.count(),
         'total_students': User.objects.filter(role__name='student').count(),
@@ -56,6 +93,7 @@ def admin_dashboard_view(request):
         'active_semester': Semester.objects.filter(is_current=True).first(),
         'recent_users': User.objects.order_by('-created_at')[:5],
         'recent_files': LectureFile.objects.filter(is_deleted=False).order_by('-upload_date')[:5],
+        'recent_activities': UserActivity.objects.select_related('user').order_by('-timestamp')[:10],
     }
     return render(request, 'admin_panel/dashboard.html', context)
 
@@ -185,13 +223,15 @@ def admin_add_course_view(request):
                 semester_id=semester_id,
             )
             
-            # إضافة التخصصات
-            for major_id in major_ids:
-                course.majors.add(major_id)
+            # إضافة التخصصات (bulk)
+            course.majors.add(*major_ids)
             
-            # إضافة المدرسين
-            for instructor_id in instructor_ids:
-                InstructorCourse.objects.create(course=course, instructor_id=instructor_id)
+            # إضافة المدرسين (bulk_create)
+            instructor_courses = [
+                InstructorCourse(course=course, instructor_id=int(instructor_id))
+                for instructor_id in instructor_ids
+            ]
+            InstructorCourse.objects.bulk_create(instructor_courses)
             
             messages.success(request, f'تم إضافة المقرر {name} بنجاح.')
         except Exception as e:
@@ -281,24 +321,48 @@ def admin_promote_students_view(request):
         return redirect('core:dashboard_redirect')
     
     if request.method == 'POST':
-        # ترقية جميع الطلاب للمستوى التالي
-        students = User.objects.filter(role__name='student', level__isnull=False)
-        promoted_count = 0
+        # الحصول على أعلى مستوى (للخريجين)
+        max_level = Level.objects.order_by('-level_number').first()
+        
+        # جلب الطلاب مع مستوياتهم
+        students = User.objects.filter(
+            role__name='student', 
+            level__isnull=False
+        ).select_related('level')
+        
+        # تجميع التحديثات حسب المستوى الجديد
+        updates_by_level = {}
+        graduated_ids = []
         
         for student in students:
             current_level = student.level
-            next_level = Level.objects.filter(level_number=current_level.level_number + 1).first()
+            
+            # استبعاد الخريجين (أعلى مستوى)
+            if max_level and current_level.level_number >= max_level.level_number:
+                graduated_ids.append(student.id)
+                continue
+            
+            next_level = Level.objects.filter(
+                level_number=current_level.level_number + 1
+            ).first()
             
             if next_level:
-                student.level = next_level
-                student.save()
-                promoted_count += 1
+                if next_level.id not in updates_by_level:
+                    updates_by_level[next_level.id] = []
+                updates_by_level[next_level.id].append(student.id)
         
-        messages.success(request, f'تم ترقية {promoted_count} طالب للمستوى التالي.')
-        return redirect('core:admin_users')
+        # تنفيذ التحديثات بشكل مجمع (Bulk Update)
+        promoted_count = 0
+        for level_id, student_ids in updates_by_level.items():
+            count = User.objects.filter(id__in=student_ids).update(level_id=level_id)
+            promoted_count += count
+        
+        messages.success(request, f'تم ترقية {promoted_count} طالب للمستوى التالي. ({len(graduated_ids)} طالب في المستوى الأخير)')
+    
+    levels = Level.objects.annotate(students_count=Count('students')).order_by('level_number')
     
     context = {
-        'students_count': User.objects.filter(role__name='student', level__isnull=False).count(),
+        'levels': levels,
     }
     return render(request, 'admin_panel/promote_students.html', context)
 
@@ -312,15 +376,13 @@ def instructor_dashboard_view(request):
         messages.error(request, 'ليس لديك صلاحية الوصول لهذه الصفحة.')
         return redirect('core:dashboard_redirect')
     
-    my_courses = Course.objects.filter(instructors=request.user)
-    my_files = LectureFile.objects.filter(uploader=request.user, is_deleted=False)
+    courses = Course.objects.filter(instructors=request.user)
     
     context = {
-        'my_courses': my_courses,
-        'my_files_count': my_files.count(),
-        'recent_files': my_files.order_by('-upload_date')[:5],
-        'total_downloads': sum(f.download_count for f in my_files),
-        'total_views': sum(f.view_count for f in my_files),
+        'courses_count': courses.count(),
+        'files_count': LectureFile.objects.filter(uploader=request.user, is_deleted=False).count(),
+        'recent_files': LectureFile.objects.filter(uploader=request.user, is_deleted=False).order_by('-upload_date')[:5],
+        'courses': courses[:5],
     }
     return render(request, 'instructor/dashboard.html', context)
 
@@ -332,7 +394,11 @@ def instructor_courses_view(request):
         messages.error(request, 'ليس لديك صلاحية الوصول.')
         return redirect('core:dashboard_redirect')
     
-    courses = Course.objects.filter(instructors=request.user).select_related('level', 'semester')
+    courses = Course.objects.filter(
+        instructors=request.user
+    ).select_related('level', 'semester').prefetch_related('majors').annotate(
+        files_count=Count('files', filter=Q(files__is_deleted=False))
+    )
     
     context = {
         'courses': courses,
@@ -342,7 +408,7 @@ def instructor_courses_view(request):
 
 @login_required
 def instructor_course_files_view(request, course_id):
-    """ملفات مقرر معين"""
+    """ملفات المقرر"""
     if not request.user.is_instructor():
         messages.error(request, 'ليس لديك صلاحية الوصول.')
         return redirect('core:dashboard_redirect')
@@ -391,7 +457,7 @@ def instructor_upload_file_view(request, course_id):
             
             lecture_file.save()
             
-            # إرسال إشعار للطلاب
+            # إرسال إشعار للطلاب (باستخدام bulk_create)
             send_file_notification(course, lecture_file, request.user)
             
             messages.success(request, f'تم رفع الملف "{title}" بنجاح.')
@@ -467,20 +533,21 @@ def instructor_send_notification_view(request, course_id):
             course=course,
         )
         
-        # إضافة المستلمين (طلاب المقرر)
+        # جلب الطلاب المستهدفين
         students = User.objects.filter(
             role__name='student',
             major__in=course.majors.all(),
             level=course.level
-        )
+        ).values_list('id', flat=True)
         
-        for student in students:
-            NotificationRecipient.objects.create(
-                notification=notification,
-                user=student
-            )
+        # استخدام bulk_create لتحسين الأداء
+        recipients = [
+            NotificationRecipient(notification=notification, user_id=student_id)
+            for student_id in students
+        ]
+        NotificationRecipient.objects.bulk_create(recipients, batch_size=500)
         
-        messages.success(request, f'تم إرسال الإشعار لـ {students.count()} طالب.')
+        messages.success(request, f'تم إرسال الإشعار لـ {len(students)} طالب.')
         return redirect('core:instructor_courses')
     
     context = {
@@ -499,69 +566,104 @@ def student_dashboard_view(request):
         return redirect('core:dashboard_redirect')
     
     user = request.user
-    current_semester = Semester.objects.filter(is_current=True).first()
     
-    # المقررات الحالية
-    current_courses = Course.objects.filter(
-        majors=user.major,
-        level=user.level,
-        semester=current_semester
-    ) if current_semester and user.major and user.level else []
-    
-    # الإشعارات غير المقروءة
-    unread_notifications = NotificationRecipient.objects.filter(
-        user=user,
-        is_read=False
-    ).select_related('notification').order_by('-notification__created_at')[:5]
-    
-    context = {
-        'current_courses': current_courses,
-        'unread_notifications': unread_notifications,
-        'unread_count': unread_notifications.count(),
-    }
-    return render(request, 'student/dashboard.html', context)
-
-
-@login_required
-def student_courses_view(request):
-    """مقررات الطالب الحالية"""
-    if not request.user.is_student():
-        messages.error(request, 'ليس لديك صلاحية الوصول.')
-        return redirect('core:dashboard_redirect')
-    
-    user = request.user
+    # المقررات الحالية (الفصل الحالي فقط)
     current_semester = Semester.objects.filter(is_current=True).first()
     
     courses = Course.objects.filter(
         majors=user.major,
         level=user.level,
         semester=current_semester
-    ).select_related('level', 'semester') if current_semester and user.major and user.level else []
+    ).select_related('level', 'semester') if user.major and user.level and current_semester else Course.objects.none()
+    
+    # الإشعارات غير المقروءة
+    unread_notifications = NotificationRecipient.objects.filter(
+        user=user,
+        is_read=False
+    ).count()
+    
+    # آخر الملفات
+    recent_files = LectureFile.objects.filter(
+        course__in=courses,
+        is_deleted=False,
+        is_visible=True
+    ).order_by('-upload_date')[:5]
+    
+    context = {
+        'courses_count': courses.count(),
+        'unread_notifications': unread_notifications,
+        'recent_files': recent_files,
+        'current_semester': current_semester,
+    }
+    return render(request, 'student/dashboard.html', context)
+
+
+@login_required
+def student_courses_view(request):
+    """مقررات الطالب (الفصل الحالي)"""
+    if not request.user.is_student():
+        messages.error(request, 'ليس لديك صلاحية الوصول.')
+        return redirect('core:dashboard_redirect')
+    
+    user = request.user
+    
+    # المقررات الحالية فقط (is_current=True)
+    current_semester = Semester.objects.filter(is_current=True).first()
+    
+    courses = Course.objects.filter(
+        majors=user.major,
+        level=user.level,
+        semester=current_semester
+    ).select_related('level', 'semester').prefetch_related('instructors').annotate(
+        files_count=Count('files', filter=Q(files__is_deleted=False, files__is_visible=True))
+    ) if user.major and user.level and current_semester else Course.objects.none()
     
     context = {
         'courses': courses,
-        'semester': current_semester,
+        'current_semester': current_semester,
     }
     return render(request, 'student/courses.html', context)
 
 
 @login_required
-def student_course_files_view(request, course_id):
-    """ملفات مقرر معين"""
+def student_archive_view(request):
+    """أرشيف المقررات السابقة"""
     if not request.user.is_student():
         messages.error(request, 'ليس لديك صلاحية الوصول.')
         return redirect('core:dashboard_redirect')
     
-    course = get_object_or_404(Course, id=course_id)
-    
-    # التحقق من أن الطالب مسجل في هذا المقرر
     user = request.user
-    if not (user.major in course.majors.all() and user.level == course.level):
-        messages.error(request, 'ليس لديك صلاحية الوصول لهذا المقرر.')
-        return redirect('core:student_courses')
+    
+    # المقررات من الفصول السابقة (is_current=False)
+    archived_courses = Course.objects.filter(
+        majors=user.major,
+        semester__is_current=False
+    ).select_related('level', 'semester').prefetch_related('instructors').annotate(
+        files_count=Count('files', filter=Q(files__is_deleted=False, files__is_visible=True))
+    ).order_by('-semester__academic_year', '-semester__semester_number') if user.major else Course.objects.none()
+    
+    context = {
+        'courses': archived_courses,
+    }
+    return render(request, 'student/archive.html', context)
+
+
+@login_required
+def student_course_files_view(request, course_id):
+    """ملفات المقرر للطالب"""
+    if not request.user.is_student():
+        messages.error(request, 'ليس لديك صلاحية الوصول.')
+        return redirect('core:dashboard_redirect')
+    
+    user = request.user
+    course = get_object_or_404(
+        Course, 
+        id=course_id, 
+        majors=user.major
+    )
     
     files = LectureFile.objects.filter(
-        course=course,
+        course=course, 
         is_deleted=False,
         is_visible=True
     ).order_by('-upload_date')
@@ -574,70 +676,20 @@ def student_course_files_view(request, course_id):
 
 
 @login_required
-def student_archive_view(request):
-    """أرشيف المقررات السابقة"""
-    if not request.user.is_student():
-        messages.error(request, 'ليس لديك صلاحية الوصول.')
-        return redirect('core:dashboard_redirect')
-    
-    user = request.user
-    current_semester = Semester.objects.filter(is_current=True).first()
-    
-    # المقررات من الفصول السابقة أو المستويات السابقة
-    archived_courses = Course.objects.filter(
-        majors=user.major
-    ).exclude(
-        semester=current_semester,
-        level=user.level
-    ).select_related('level', 'semester') if user.major else []
-    
-    context = {
-        'courses': archived_courses,
-    }
-    return render(request, 'student/archive.html', context)
-
-
-@login_required
-def student_notifications_view(request):
-    """إشعارات الطالب"""
-    if not request.user.is_student():
-        messages.error(request, 'ليس لديك صلاحية الوصول.')
-        return redirect('core:dashboard_redirect')
-    
-    notifications = NotificationRecipient.objects.filter(
-        user=request.user
-    ).select_related('notification', 'notification__sender').order_by('-notification__created_at')
-    
-    paginator = Paginator(notifications, 20)
-    page = request.GET.get('page')
-    notifications = paginator.get_page(page)
-    
-    context = {
-        'notifications': notifications,
-    }
-    return render(request, 'student/notifications.html', context)
-
-
-@login_required
-def mark_notification_read_view(request, notification_id):
-    """تحديد الإشعار كمقروء"""
-    recipient = get_object_or_404(NotificationRecipient, id=notification_id, user=request.user)
-    recipient.mark_as_read()
-    
-    if request.headers.get('HX-Request'):
-        return HttpResponse('')
-    return redirect('core:student_notifications')
-
-
-# ==================== عروض مشتركة ====================
-
-@login_required
 def view_file_view(request, file_id):
     """عرض ملف"""
     lecture_file = get_object_or_404(LectureFile, id=file_id, is_deleted=False)
     
-    # تسجيل المشاهدة
-    lecture_file.increment_view()
+    # التحقق من الصلاحية
+    user = request.user
+    if user.is_student():
+        if user.major not in lecture_file.course.majors.all():
+            messages.error(request, 'ليس لديك صلاحية الوصول لهذا الملف.')
+            return redirect('core:student_courses')
+    
+    # زيادة عداد المشاهدات
+    lecture_file.views_count += 1
+    lecture_file.save(update_fields=['views_count'])
     
     context = {
         'file': lecture_file,
@@ -650,42 +702,51 @@ def download_file_view(request, file_id):
     """تحميل ملف"""
     lecture_file = get_object_or_404(LectureFile, id=file_id, is_deleted=False)
     
+    # التحقق من الصلاحية
+    user = request.user
+    if user.is_student():
+        if user.major not in lecture_file.course.majors.all():
+            messages.error(request, 'ليس لديك صلاحية تحميل هذا الملف.')
+            return redirect('core:student_courses')
+    
+    # زيادة عداد التحميلات
+    lecture_file.downloads_count += 1
+    lecture_file.save(update_fields=['downloads_count'])
+    
     if lecture_file.content_type == 'external_link':
         return redirect(lecture_file.external_url)
     
-    # تسجيل التحميل
-    lecture_file.increment_download()
-    
-    response = FileResponse(lecture_file.file.open('rb'))
-    response['Content-Disposition'] = f'attachment; filename="{lecture_file.title}.{lecture_file.get_file_extension()}"'
-    return response
-
-
-def send_file_notification(course, lecture_file, sender):
-    """إرسال إشعار عند رفع ملف جديد"""
-    notification = Notification.objects.create(
-        sender=sender,
-        title=f'ملف جديد: {lecture_file.title}',
-        body=f'تم رفع ملف جديد في مقرر {course.name}',
-        notification_type='file_upload',
-        course=course,
-    )
-    
-    # إضافة المستلمين
-    students = User.objects.filter(
-        role__name='student',
-        major__in=course.majors.all(),
-        level=course.level
-    )
-    
-    for student in students:
-        NotificationRecipient.objects.create(
-            notification=notification,
-            user=student
+    if lecture_file.file:
+        return FileResponse(
+            lecture_file.file.open('rb'),
+            as_attachment=True,
+            filename=lecture_file.file.name.split('/')[-1]
         )
+    
+    messages.error(request, 'الملف غير متوفر.')
+    return redirect('core:view_file', file_id=file_id)
 
 
-# ==================== عروض الطالب الإضافية ====================
+@login_required
+def student_notifications_view(request):
+    """إشعارات الطالب"""
+    if not request.user.is_student():
+        messages.error(request, 'ليس لديك صلاحية الوصول.')
+        return redirect('core:dashboard_redirect')
+    
+    notifications = NotificationRecipient.objects.filter(
+        user=request.user
+    ).select_related('notification', 'notification__sender', 'notification__course').order_by('-notification__created_at')
+    
+    paginator = Paginator(notifications, 20)
+    page = request.GET.get('page')
+    notifications = paginator.get_page(page)
+    
+    context = {
+        'notifications': notifications,
+    }
+    return render(request, 'student/notifications.html', context)
+
 
 @login_required
 def student_notification_detail_view(request, notification_id):
@@ -695,8 +756,8 @@ def student_notification_detail_view(request, notification_id):
         return redirect('core:dashboard_redirect')
     
     recipient = get_object_or_404(
-        NotificationRecipient, 
-        id=notification_id, 
+        NotificationRecipient,
+        notification_id=notification_id,
         user=request.user
     )
     
